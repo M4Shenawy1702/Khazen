@@ -1,0 +1,23 @@
+[
+  {
+    "Id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "Name": "Main Warehouse",
+    "Address": "Cairo",
+    "PhoneNumber": "01000000000",
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    "Name": "Secondary Warehouse",
+    "Address": "Alexandria",
+    "PhoneNumber": "01111111111",
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+    "Name": "Delta Warehouse",
+    "Address": "Mansoura",
+    "PhoneNumber": "01212121212",
+    "CreatedBy": "System"
+  }
+]

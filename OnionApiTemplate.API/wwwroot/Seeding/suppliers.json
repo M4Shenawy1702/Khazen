@@ -1,0 +1,47 @@
+[
+  {
+    "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "name": "TechWorld Supplies",
+    "address": "123 Smart St, Cairo, Egypt",
+    "phoneNumber": "+20 111 111 1111",
+    "email": "contact@techworld.com",
+    "isActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    "name": "OfficePro Distributors",
+    "address": "45 Office Park Rd, Giza, Egypt",
+    "phoneNumber": "+20 122 222 2222",
+    "email": "sales@officepro.com",
+    "isActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+    "name": "ElectroMart Egypt",
+    "address": "78 Downtown Mall, Alexandria, Egypt",
+    "phoneNumber": "+20 133 333 3333",
+    "email": "info@electromart.com",
+    "isActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+    "name": "Furniture Plus",
+    "address": "12 Industrial Zone, 6th October City, Egypt",
+    "phoneNumber": "+20 144 444 4444",
+    "email": "support@furnitureplus.com",
+    "isActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+    "name": "NextGen Electronics",
+    "address": "56 High Tech Rd, New Cairo, Egypt",
+    "phoneNumber": "+20 155 555 5555",
+    "email": "orders@nextgen.com",
+    "isActive": true,
+    "CreatedBy": "System"
+  }
+]

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "name": "Laptop Pro 15",
+    "description": "High-performance laptop with 15-inch display",
+    "image": "/images/products/laptop-pro-15.png",
+    "purchasePrice": 1500.00,
+    "sellingPrice": 2000.00,
+    "avgPrice": 1500.00,
+    "minimumStock": 10,
+    "sku": "LTP-PRO-15",
+    "brandId": "11111111-1111-1111-1111-111111111111",
+    "categoryId": "11111111-1111-1111-1111-111111111111",
+    "CreatedBy": "System"
+  },
+  {
+    "id": "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    "name": "Wireless Headphones",
+    "description": "Noise-cancelling over-ear wireless headphones",
+    "image": "/images/products/headphones.png",
+    "purchasePrice": 120.00,
+    "sellingPrice": 200.00,
+    "avgPrice": 120.00,
+    "minimumStock": 20,
+    "sku": "HPH-WL-001",
+    "brandId": "33333333-3333-3333-3333-333333333333",
+    "categoryId": "11111111-1111-1111-1111-111111111111",
+    "CreatedBy": "System"
+  },
+  {
+    "id": "33333333-cccc-cccc-cccc-cccccccccccc",
+    "name": "Office Chair Deluxe",
+    "description": "Ergonomic office chair with lumbar support",
+    "image": "/images/products/office-chair.png",
+    "purchasePrice": 90.00,
+    "sellingPrice": 150.00,
+    "avgPrice": 90.00,
+    "minimumStock": 15,
+    "sku": "CHR-OF-DELX",
+    "brandId": "44444444-4444-4444-4444-444444444444",
+    "categoryId": "33333333-3333-3333-3333-333333333333",
+    "CreatedBy": "System"
+  },
+  {
+    "id": "44444444-dddd-dddd-dddd-dddddddddddd",
+    "name": "Smartphone X",
+    "description": "Latest generation smartphone with 5G connectivity",
+    "image": "/images/products/smartphone-x.png",
+    "purchasePrice": 700.00,
+    "sellingPrice": 999.99,
+    "avgPrice": 700.00,
+    "minimumStock": 25,
+    "sku": "SMT-X-2025",
+    "brandId": "22222222-2222-2222-2222-222222222222",
+    "categoryId": "11111111-1111-1111-1111-111111111111",
+    "CreatedBy": "System"
+  },
+  {
+    "id": "55555555-eeee-eeee-eeee-eeeeeeeeeeee",
+    "name": "LED Monitor 27\"",
+    "description": "Ultra HD 27-inch LED monitor",
+    "image": "/images/products/monitor-27.png",
+    "purchasePrice": 300.00,
+    "sellingPrice": 450.00,
+    "avgPrice": 300.00,
+    "minimumStock": 10,
+    "sku": "MON-LED-27",
+    "brandId": "11111111-1111-1111-1111-111111111111",
+    "categoryId": "11111111-1111-1111-1111-111111111111",
+    "CreatedBy": "System"
+  }
+]

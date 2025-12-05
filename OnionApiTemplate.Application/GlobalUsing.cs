@@ -1,0 +1,9 @@
+﻿global using AutoMapper;
+global using FluentValidation;
+global using Khazen.Application.DOTs.HRModule.Employee;
+global using Khazen.Application.DOTs.HRModule.PerformanceReviewDtos;
+global using Khazen.Domain.Entities.HRModule;
+global using Khazen.Domain.Entities.UsersModule;
+global using Khazen.Domain.IRepositoty;
+global using MediatR;
+global using Microsoft.AspNetCore.Identity;

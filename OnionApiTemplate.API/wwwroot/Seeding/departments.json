@@ -1,0 +1,142 @@
+[
+  {
+    "Id": "00000000-0000-0000-0000-000000000001",
+    "Name": "Executive Leadership",
+    "Description": "Senior management team setting company strategy",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000002",
+    "Name": "Human Resources",
+    "Description": "Employee relations, benefits, and talent management",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000003",
+    "Name": "Information Technology",
+    "Description": "Technology infrastructure and systems management",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000004",
+    "Name": "Finance",
+    "Description": "Accounting, budgeting, and financial reporting",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000005",
+    "Name": "Marketing",
+    "Description": "Brand management, advertising, and promotions",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000006",
+    "Name": "Sales",
+    "Description": "Business development and customer acquisition",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000007",
+    "Name": "Customer Support",
+    "Description": "Client service and technical support",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000008",
+    "Name": "Research & Development",
+    "Description": "Product innovation and technology research",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000009",
+    "Name": "Operations",
+    "Description": "Daily business process management",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000010",
+    "Name": "Legal",
+    "Description": "Corporate legal affairs and compliance",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000011",
+    "Name": "Quality Assurance",
+    "Description": "Product quality control and testing",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000012",
+    "Name": "Supply Chain",
+    "Description": "Logistics, procurement, and vendor management",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000013",
+    "Name": "Facilities",
+    "Description": "Office management and maintenance",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000014",
+    "Name": "Business Intelligence",
+    "Description": "Data analysis and strategic insights",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000015",
+    "Name": "Product Management",
+    "Description": "Product lifecycle and roadmap planning",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000016",
+    "Name": "Corporate Communications",
+    "Description": "Internal and external messaging",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000017",
+    "Name": "Learning & Development",
+    "Description": "Employee training and skills enhancement",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000018",
+    "Name": "Health & Safety",
+    "Description": "Workplace safety and compliance",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000019",
+    "Name": "Diversity & Inclusion",
+    "Description": "Workplace equity initiatives",
+    "IsActive": true,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "00000000-0000-0000-0000-000000000020",
+    "Name": "Sustainability",
+    "Description": "Environmental impact and corporate responsibility",
+    "IsActive": true,
+    "CreatedBy": "System"
+  }
+]

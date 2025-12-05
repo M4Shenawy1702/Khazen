@@ -1,0 +1,152 @@
+[
+  {
+    "Id": "11111111-1111-1111-1111-111111111111",
+    "Code": "AC-1000",
+    "Name": "Cash Account",
+    "Description": "Main cash account",
+    "AccountType": 0,
+    "ParentId": null,
+    "Balance": 10000,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "11111111-1111-1111-1111-111111111112",
+    "Code": "AC-1010",
+    "Name": "Bank Account",
+    "Description": "Primary bank account",
+    "AccountType": 0,
+    "ParentId": null,
+    "Balance": 25000,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "11111111-1111-1111-1111-111111111113",
+    "Code": "AC-1100",
+    "Name": "Accounts Receivable",
+    "Description": "Outstanding customer invoices",
+    "AccountType": 0,
+    "ParentId": null,
+    "Balance": 0,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "22222222-2222-2222-2222-222222222221",
+    "Code": "AC-2000",
+    "Name": "Accounts Payable",
+    "Description": "Outstanding supplier payments",
+    "AccountType": 1,
+    "ParentId": null,
+    "Balance": 0,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "22222222-2222-2222-2222-222222222222",
+    "Code": "AC-2100",
+    "Name": "Salaries Payable",
+    "Description": "Pending salary obligations",
+    "AccountType": 1,
+    "ParentId": null,
+    "Balance": 0,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "22222222-2222-2222-2222-222222222223",
+    "Code": "AC-2200",
+    "Name": "Tax Payable",
+    "Description": "Sales tax or VAT obligations",
+    "AccountType": 1,
+    "ParentId": null,
+    "Balance": 0,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "33333333-3333-3333-3333-333333333331",
+    "Code": "AC-3000",
+    "Name": "Owner's Equity",
+    "Description": "Capital invested by owners",
+    "AccountType": 2,
+    "ParentId": null,
+    "Balance": 50000,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "44444444-4444-4444-4444-444444444441",
+    "Code": "AC-4000",
+    "Name": "Sales Revenue",
+    "Description": "Income from product sales",
+    "AccountType": 3,
+    "ParentId": null,
+    "Balance": 0,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "44444444-4444-4444-4444-444444444442",
+    "Code": "AC-4100",
+    "Name": "Service Revenue",
+    "Description": "Income from provided services",
+    "AccountType": 3,
+    "ParentId": null,
+    "Balance": 0,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "55555555-5555-5555-5555-555555555551",
+    "Code": "AC-5000",
+    "Name": "Salary Expense",
+    "Description": "Employee salaries and wages",
+    "AccountType": 4,
+    "ParentId": null,
+    "Balance": 0,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "55555555-5555-5555-5555-555555555552",
+    "Code": "AC-5100",
+    "Name": "Rent Expense",
+    "Description": "Office or facility rent costs",
+    "AccountType": 4,
+    "ParentId": null,
+    "Balance": 0,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "55555555-5555-5555-5555-555555555553",
+    "Code": "AC-5200",
+    "Name": "Utilities Expense",
+    "Description": "Electricity, water, internet, etc.",
+    "AccountType": 4,
+    "ParentId": null,
+    "Balance": 0,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "55555555-5555-5555-5555-555555555555",
+    "Code": "AC-5400",
+    "Name": "Discount Allowed",
+    "Description": "Customer discounts and allowances",
+    "AccountType": 4,
+    "ParentId": null,
+    "Balance": 0,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "55555555-5555-5555-5555-555555555554",
+    "Code": "AC-5300",
+    "Name": "Office Supplies Expense",
+    "Description": "Stationery and consumables",
+    "AccountType": 4,
+    "ParentId": null,
+    "Balance": 0,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "66666666-6666-6666-6666-666666666666",
+    "Code": "AC-5500",
+    "Name": "Purchases Account",
+    "Description": "Used to record purchase expenses",
+    "AccountType": 4,
+    "ParentId": null,
+    "Balance": 0,
+    "CreatedBy": "System"
+  }
+]
