@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.HRModule.AttendanceUsecases.Commands.CheckIn
 {
-    public record CheckInAttendanceCommand(CheckInAttendanceDto Dto) : IRequest<AttendanceDto>;
+    public record CheckInAttendanceCommand(CheckInDto Dto, string CurrentUserId) : IRequest<AttendanceDto>;
 }

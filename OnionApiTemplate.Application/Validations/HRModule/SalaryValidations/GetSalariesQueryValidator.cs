@@ -2,7 +2,7 @@
 
 namespace Khazen.Application.Validations.HRModule.SalaryValidations
 {
-    public class SalariesQueryParametersValidator : AbstractValidator<GetSalariesQuery>
+    public class SalariesQueryParametersValidator : AbstractValidator<GetAllSalariesQuery>
     {
         public SalariesQueryParametersValidator()
         {

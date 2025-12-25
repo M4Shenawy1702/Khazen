@@ -13,8 +13,8 @@ namespace Khazen.Application.UseCases.AuthService.Commands.ChangePassword
                 .NotNull().WithMessage("Password data is required.");
 
             RuleFor(x => x.Dto.CurrentPassword)
-                .NotEmpty().WithMessage("Current password is required.")
-                .MinimumLength(6).WithMessage("Current password must be at least 6 characters long.");
+              .NotEmpty().WithMessage("Current password is required.")
+              .MinimumLength(8).WithMessage("Current password must be at least 8 characters long.");
 
             RuleFor(x => x.Dto.NewPassword)
                 .NotEmpty().WithMessage("New password is required.")
@@ -22,7 +22,9 @@ namespace Khazen.Application.UseCases.AuthService.Commands.ChangePassword
                 .Matches("[A-Z]").WithMessage("New password must contain at least one uppercase letter.")
                 .Matches("[a-z]").WithMessage("New password must contain at least one lowercase letter.")
                 .Matches("[0-9]").WithMessage("New password must contain at least one number.")
-                .Matches("[^a-zA-Z0-9]").WithMessage("New password must contain at least one special character.");
+                .Matches("[^a-zA-Z0-9]").WithMessage("New password must contain at least one special character.")
+                .NotEqual(x => x.Dto.CurrentPassword)
+                .WithMessage("The new password cannot be the same as the current password.");
         }
     }
 }

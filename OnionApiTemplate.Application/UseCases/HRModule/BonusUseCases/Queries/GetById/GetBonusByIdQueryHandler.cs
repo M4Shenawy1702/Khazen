@@ -21,7 +21,7 @@ namespace Khazen.Application.UseCases.HRModule.BonusUseCases.Queries.GetById
             {
                 _logger.LogDebug("Starting GetBonusByIdQueryHandler for BonusId: {BonusId}", request.Id);
 
-                var bonusRepo = _unitOfWork.GetRepository<Bonus, int>();
+                var bonusRepo = _unitOfWork.GetRepository<Bonus, Guid>();
                 var bonus = await bonusRepo.GetAsync(new GetBounsByIdSpecification(request.Id), cancellationToken);
 
                 if (bonus is null)

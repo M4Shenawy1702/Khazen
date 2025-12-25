@@ -4,20 +4,30 @@ using Khazen.Application.Specification.SalesModule.SalesInvoicesSpecifications;
 using Khazen.Domain.Entities.AccountingModule;
 using Khazen.Domain.Entities.SalesModule;
 using Khazen.Domain.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands.Void
 {
     internal class VoidSalesInvoiceCommandHandler(
         IUnitOfWork unitOfWork,
-        INumberSequenceService numberSequenceService
+        INumberSequenceService numberSequenceService, ILogger<VoidSalesInvoiceCommandHandler> logger, UserManager<ApplicationUser> userManager
     ) : IRequestHandler<VoidSalesInvoiceCommand, bool>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly INumberSequenceService _numberSequenceService = numberSequenceService;
+        private readonly ILogger<VoidSalesInvoiceCommandHandler> _logger = logger;
+        private readonly UserManager<ApplicationUser> _userManager = userManager;
 
         public async Task<bool> Handle(VoidSalesInvoiceCommand request, CancellationToken cancellationToken)
         {
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            if (user is null)
+            {
+                _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
+
 
             try
             {
@@ -37,25 +47,27 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
                 var journalEntry = await journalRepo.GetAsync(new GetJurnalEntryByIdWithIncludesSpecification(salesInvoice.JournalEntryId), cancellationToken)
                     ?? throw new NotFoundException<JournalEntry>(salesInvoice.JournalEntryId);
 
-                var reversalEntry = new JournalEntry
-                {
-                    EntryDate = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow,
-                    Description = $"Reversal for Voided Invoice {salesInvoice.InvoiceNumber}",
-                    JournalEntryNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken),
-                    TransactionType = TransactionType.SalesInvoiceReversal,
-                    Lines = journalEntry.Lines.Select(l => new JournalEntryLine
-                    {
-                        AccountId = l.AccountId,
-                        Debit = l.Credit,
-                        Credit = l.Debit
-                    }).ToList(),
-                    ReversalOfJournalEntryId = journalEntry.Id
-                };
+                if (journalEntry == null)
+                    throw new BadRequestException("Original journal entry is missing.");
+
+                var reversalEntry = journalEntry.CreateReversal(user.UserName!, $"Reversed JE for JE-Number : {journalEntry.JournalEntryNumber}");
+
+                reversalEntry.JournalEntryNumber = await _numberSequenceService.GetNextNumber(
+                    "JE",
+                    DateTime.UtcNow.Year,
+                    cancellationToken
+                );
+
+                _logger.LogInformation(
+                    "Created reversal journal entry {ReversalNumber} for Sales Invoice {InvoiceNumber}",
+                    reversalEntry.JournalEntryNumber,
+                    salesInvoice.InvoiceNumber
+                );
+
 
                 await journalRepo.AddAsync(reversalEntry, cancellationToken);
 
-                salesInvoice.Void(request.VoidedBy);
+                salesInvoice.Void(user.UserName!);
 
                 invoiceRepo.Update(salesInvoice);
 

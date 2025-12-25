@@ -17,37 +17,41 @@ namespace Khazen.Application.UseCases.HRModule.BonusUseCases.Commands.Toggle
 
         public async Task<bool> Handle(ToggleBonusCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting ToggleBonusCommandHandler for BonusId: {BonusId}", request.Id);
+            var bonusId = request.Id;
+            var actorUserId = request.CurrentUserId;
 
-            try
+            _logger.LogInformation("Starting ToggleBonusCommandHandler for BonusId: {BonusId} by Actor: {ActorId}", bonusId, actorUserId);
+
+            var user = await _userManager.FindByIdAsync(actorUserId);
+            if (user is null)
             {
-                var bonusRepo = _unitOfWork.GetRepository<Bonus, int>();
-                var bonus = await bonusRepo.GetAsync(new GetBounsByIdSpecification(request.Id), cancellationToken);
-                if (bonus == null)
-                {
-                    _logger.LogWarning("Bonus not found while toggling IsDeleted for Id: {BonusId}", request.Id);
-                    throw new NotFoundException<Bonus>(request.Id);
-                }
-                var user = await _userManager.FindByNameAsync(request.ModifiedBy);
-                if (user is null)
-                {
-                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.ModifiedBy);
-                    throw new NotFoundException<ApplicationUser>(request.ModifiedBy);
-                }
-                bonus.Toggle(request.ModifiedBy);
-
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                _logger.LogInformation("Successfully toggled bonus (IsDeleted = {IsDeleted}) for BonusId: {BonusId}",
-                    bonus.IsDeleted, request.Id);
-
-                return true;
+                _logger.LogWarning("Actor user not found. ActorId: {ActorId}", actorUserId);
+                throw new NotFoundException<ApplicationUser>(actorUserId);
             }
-            catch (Exception ex)
+
+            var bonusRepo = _unitOfWork.GetRepository<Bonus, Guid>();
+            var bonus = await bonusRepo.GetAsync(new GetBounsByIdSpecification(bonusId), cancellationToken);
+
+            if (bonus == null)
             {
-                _logger.LogError(ex, "Unexpected error occurred while toggling bonus for Id: {BonusId}", request.Id);
-                throw new ApplicationException("An unexpected error occurred while toggling the bonus.", ex);
+                _logger.LogWarning("Bonus not found while toggling IsDeleted for Id: {BonusId}", bonusId);
+                throw new NotFoundException<Bonus>(bonusId);
             }
+
+            if (bonus.IsPaid)
+            {
+                _logger.LogWarning("Attempted to toggle paid bonus record {BonusId}.", bonusId);
+                throw new ConflictException("Cannot delete or toggle a bonus record that has already been marked as paid.");
+            }
+
+            bonus.Toggle(actorUserId);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Successfully toggled bonus (IsDeleted = {IsDeleted}) for BonusId: {BonusId}",
+                bonus.IsDeleted, bonusId);
+
+            return true;
         }
     }
 }

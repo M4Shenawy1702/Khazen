@@ -3,7 +3,7 @@
     internal class GetDeductionByIdSpecification
         : BaseSpecifications<Deduction>
     {
-        public GetDeductionByIdSpecification(int Id)
+        public GetDeductionByIdSpecification(Guid Id)
             : base(d => d.Id == Id)
         {
             AddInclude(d => d.Employee);

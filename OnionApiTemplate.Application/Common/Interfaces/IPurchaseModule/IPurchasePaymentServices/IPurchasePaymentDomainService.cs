@@ -5,6 +5,6 @@ namespace Khazen.Application.Common.Interfaces.IPurchaseModule.IPurchasePaymentS
 {
     public interface IPurchasePaymentDomainService
     {
-        Task<PurchasePayment> CreatePaymentAsync(PurchaseInvoice invoice, CreatePurchasePaymentDto Dto, CancellationToken cancellationToken);
+        Task<PurchasePayment> CreatePaymentAsync(PurchaseInvoice invoice, string CreatedBy, CreatePurchasePaymentDto Dto, CancellationToken cancellationToken);
     }
 }

@@ -15,39 +15,37 @@ namespace Khazen.Application.UseCases.HRModule.DeductionUseCases.Commands.Delete
 
         public async Task<bool> Handle(ToggleDeductionCommand request, CancellationToken cancellationToken)
         {
-            try
+            _logger.LogDebug("Starting ToggleDeductionCommandHandler for DeductionId: {DeductionId}", request.Id);
+
+            var deductionRepo = _unitOfWork.GetRepository<Deduction, Guid>();
+            var deduction = await deductionRepo.GetByIdAsync(request.Id, cancellationToken);
+
+            if (deduction is null)
             {
-                _logger.LogDebug("Starting DeleteDeductionCommandHandler for DeductionId: {DeductionId}", request.Id);
-
-                var deductionRepo = _unitOfWork.GetRepository<Deduction, int>();
-                var deduction = await deductionRepo.GetByIdAsync(request.Id, cancellationToken);
-                if (deduction is null)
-                {
-                    _logger.LogInformation("Deduction not found. DeductionId: {DeductionId}", request.Id);
-                    throw new NotFoundException<Deduction>(request.Id);
-                }
-
-                _logger.LogInformation("Toggling IsDeleted for DeductionId: {DeductionId} by {ModifiedBy}", request.Id, request.ModifiedBy);
-
-                var user = await _userManager.FindByNameAsync(request.ModifiedBy);
-                if (user is null)
-                {
-                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.ModifiedBy);
-                    throw new NotFoundException<ApplicationUser>(request.ModifiedBy);
-                }
-
-                deduction.Toggle(request.ModifiedBy);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                _logger.LogInformation("Deduction soft-deleted successfully. DeductionId: {DeductionId}", request.Id);
-
-                return true;
+                _logger.LogWarning("Deduction not found. DeductionId: {DeductionId}", request.Id);
+                throw new NotFoundException<Deduction>(request.Id);
             }
-            catch (Exception ex)
+
+            var user = await _userManager.FindByNameAsync(request.ToggledBy);
+            if (user is null)
             {
-                _logger.LogError(ex, "Error deleting Deduction with Id: {DeductionId}", request.Id);
-                throw;
+                _logger.LogWarning("User not found for identity: {ToggledBy}", request.ToggledBy);
+                throw new NotFoundException<ApplicationUser>(request.ToggledBy);
             }
+
+            if (deduction.IsProcessed)
+            {
+                throw new BadRequestException("Cannot toggle a deduction that has already been processed in payroll.");
+            }
+
+            _logger.LogInformation("Toggling IsDeleted for DeductionId: {DeductionId} by {ModifiedBy}", request.Id, request.ToggledBy);
+            deduction.Toggle(request.ToggledBy);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Deduction status toggled successfully. DeductionId: {DeductionId}", request.Id);
+
+            return true;
         }
     }
 }

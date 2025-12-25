@@ -26,19 +26,19 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchasePaymentUseCases.Com
 
         public async Task<PurchasePaymentDto> Handle(DeletePurchasePaymentCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting deletion of PurchasePayment {PaymentId} by user {User}", request.Id, request.ModifiedBy);
+            _logger.LogInformation("Starting deletion of PurchasePayment {PaymentId} by user {User}", request.Id, request.ReversedBy);
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                var user = await _userManager.FindByNameAsync(request.ModifiedBy);
+                var user = await _userManager.FindByNameAsync(request.ReversedBy);
                 if (user is null)
                 {
-                    _logger.LogWarning("User {User} not found", request.ModifiedBy);
-                    throw new NotFoundException<ApplicationUser>(request.ModifiedBy);
+                    _logger.LogWarning("User {User} not found", request.ReversedBy);
+                    throw new NotFoundException<ApplicationUser>(request.ReversedBy);
                 }
 
-                _logger.LogInformation("User validated: {User}", request.ModifiedBy);
+                _logger.LogInformation("User validated: {User}", request.ReversedBy);
 
                 var paymentRepo = _unitOfWork.GetRepository<PurchasePayment, Guid>();
                 var invoiceRepo = _unitOfWork.GetRepository<PurchaseInvoice, Guid>();
@@ -74,7 +74,7 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchasePaymentUseCases.Com
                 _logger.LogInformation("Invoice {InvoiceNumber} loaded for payment reversal", invoice.InvoiceNumber);
 
                 var reversalEntry = await _journalEntryService
-                    .CreatePrchasePaymentReversalJournalAsync(payment, invoice, cancellationToken);
+                    .CreatePurchasePaymentReversalJournalAsync(payment, invoice, request.ReversedBy, cancellationToken);
 
                 await journalRepo.AddAsync(reversalEntry, cancellationToken);
                 _logger.LogInformation("Reversal JournalEntry {JournalEntryId} created for Payment {PaymentId}", reversalEntry.Id, payment.Id);
@@ -99,10 +99,10 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchasePaymentUseCases.Com
 
                 _logger.LogInformation("Safe {SafeId} balance restored by {Amount}", safe.Id, payment.Amount);
 
-                payment.Reverse(reversalEntry.Id, request.ModifiedBy);
+                payment.Reverse(reversalEntry.Id, request.ReversedBy);
                 paymentRepo.Update(payment);
 
-                _logger.LogInformation("Payment {PaymentId} marked as reversed by {User}", payment.Id, request.ModifiedBy);
+                _logger.LogInformation("Payment {PaymentId} marked as reversed by {User}", payment.Id, request.ReversedBy);
 
                 invoice.RecalculateTotals();
                 invoiceRepo.Update(invoice);

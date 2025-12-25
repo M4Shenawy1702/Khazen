@@ -1,9 +1,8 @@
 ﻿using Khazen.Application.BaseSpecifications.HRModule.EmployeeSpecifications;
 using Khazen.Application.BaseSpecifications.HRModule.SalarySepcifications;
 using Khazen.Application.Common.Interfaces;
-using Khazen.Application.Common.Interfaces.IHRModule;
+using Khazen.Application.Common.Interfaces.IHRModule.ISalaryServices;
 using Khazen.Domain.Entities.AccountingModule;
-using Khazen.Domain.Entities.ConfigurationModule;
 using Khazen.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -13,108 +12,81 @@ namespace Khazen.Application.UseCases.HRModule.SalaryUseCases.Commands.Create
         IUnitOfWork unitOfWork,
         IMapper mapper,
         IValidator<CreateSalaryCommand> validator,
-        INumberSequenceService numberSequenceService,
-        IGetSystemValues getSystemValues,
         ILogger<CreateSalaryCommandHandler> logger,
         UserManager<ApplicationUser> userManager,
-        ISalaryCalculationService salaryCalculationService
-        , IJournalEntryService journalEntryService,
+        IJournalEntryService journalEntryService,
         ISalaryDomainService salaryDomainService)
         : IRequestHandler<CreateSalaryCommand, SalaryDto>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
         private readonly IValidator<CreateSalaryCommand> _validator = validator;
-        private readonly INumberSequenceService _numberSequenceService = numberSequenceService;
-        private readonly IGetSystemValues _getSystemValues = getSystemValues;
         private readonly ILogger<CreateSalaryCommandHandler> _logger = logger;
         private readonly UserManager<ApplicationUser> _userManager = userManager;
-        private readonly ISalaryCalculationService _salaryCalculationService = salaryCalculationService;
         private readonly IJournalEntryService _journalEntryService = journalEntryService;
         private readonly ISalaryDomainService _salaryDomainService = salaryDomainService;
 
         public async Task<SalaryDto> Handle(CreateSalaryCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting salary creation for EmployeeId: {EmployeeId}, Date: {SalaryDate}",
+            _logger.LogInformation("Initiating salary creation: Employee {Id}, Period {Date}",
                 request.Dto.EmployeeId, request.Dto.SalaryDate);
+
+            var validationResult = await _validator.ValidateAsync(request, cancellationToken);
+            if (!validationResult.IsValid)
+            {
+                _logger.LogWarning("Validation failed for CreateSalaryCommand.");
+                throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
+            }
+
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            if (user is null)
+            {
+                _logger.LogError("User {UserId} not found", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
+
+            var salaryRepo = _unitOfWork.GetRepository<Salary, Guid>();
+            var employeeRepo = _unitOfWork.GetRepository<Employee, Guid>();
+
+            var existingTask = salaryRepo.GetAsync(new GetSalaryByEmployeeIdAndSalaryDateSpec(request.Dto.EmployeeId, request.Dto.SalaryDate), cancellationToken);
+            var employeeTask = employeeRepo.GetAsync(new GetEmployeeByIdSpecification(request.Dto.EmployeeId), cancellationToken);
+
+            await Task.WhenAll(existingTask, employeeTask);
+
+            var employee = employeeTask.Result;
+            if (employee == null)
+            {
+                _logger.LogWarning("Employee not found: {Id}", request.Dto.EmployeeId);
+                throw new NotFoundException<Employee>(request.Dto.EmployeeId);
+            }
+
+            if (existingTask.Result != null)
+            {
+                _logger.LogWarning("Duplicate salary attempt for Employee {Id}", request.Dto.EmployeeId);
+                throw new AlreadyExistsException<Salary>($"Salary already processed for {request.Dto.SalaryDate:MMMM yyyy}");
+            }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
             try
             {
-                var validationResult = await _validator.ValidateAsync(request, cancellationToken);
-                if (!validationResult.IsValid)
-                {
-                    _logger.LogWarning("Validation failed for CreateSalaryCommand: {Errors}",
-                        string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
-                    throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
-                }
-
-                var salaryRepo = _unitOfWork.GetRepository<Salary, Guid>();
-                var employeeRepo = _unitOfWork.GetRepository<Employee, Guid>();
-
-                _logger.LogDebug("Checking for existing salary records for EmployeeId: {EmployeeId}", request.Dto.EmployeeId);
-
-                var existing = await salaryRepo.GetAsync(
-                    new GetSalaryByEmployeeIdAndSalaryDateSpec(request.Dto.EmployeeId, request.Dto.SalaryDate),
-                    cancellationToken);
-
-                if (existing != null)
-                {
-                    _logger.LogWarning("Salary already exists for EmployeeId: {EmployeeId} in month {SalaryDate}",
-                        request.Dto.EmployeeId, request.Dto.SalaryDate);
-                    throw new AlreadyExistsException<Salary>(
-                        $"Salary for employee with id: {request.Dto.EmployeeId} already exists for this month: {request.Dto.SalaryDate}");
-                }
-
-                var user = await _userManager.FindByNameAsync(request.CreatedBy);
-                if (user is null)
-                {
-                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.CreatedBy);
-                    throw new NotFoundException<ApplicationUser>(request.CreatedBy);
-                }
-
-                var employee = await employeeRepo.GetAsync(new GetEmployeeByIdSpecification(request.Dto.EmployeeId), cancellationToken);
-                if (employee == null)
-                {
-                    _logger.LogWarning("Employee not found for EmployeeId: {EmployeeId}", request.Dto.EmployeeId);
-                    throw new NotFoundException<Employee>(request.Dto.EmployeeId);
-                }
-
-                var salary = _salaryDomainService.CreateSalary(employee, request.Dto.SalaryDate, request.CreatedBy, request.Dto.Notes);
+                var salary = _salaryDomainService.CreateSalary(employee, request.Dto.SalaryDate, user.Id, request.Dto.Notes);
                 await salaryRepo.AddAsync(salary, cancellationToken);
 
-                _logger.LogInformation("Salary record created successfully for EmployeeId: {EmployeeId}", request.Dto.EmployeeId);
+                var journalEntry = await _journalEntryService.CreateSalaryJournalEntryAsync(employee, salary, user.Id, cancellationToken);
 
-                var journalEntryRepo = _unitOfWork.GetRepository<JournalEntry, Guid>();
-                var systemSettingsRepo = _unitOfWork.GetRepository<SystemSetting, int>();
-                var systemSettings = await systemSettingsRepo.GetAllAsync(new GetAllSystemSettingsSpec(), cancellationToken);
+                await _unitOfWork.GetRepository<JournalEntry, Guid>().AddAsync(journalEntry, cancellationToken);
 
-                var salaryExpenseAccountValue = _getSystemValues.GetSettingValue(systemSettings, "SalaryExpenseAccountId");
-                if (!Guid.TryParse(salaryExpenseAccountValue, out var salaryExpenseAccountId))
-                {
-                    _logger.LogError("Salary Expense Account ID is missing or invalid in system settings.");
-                    throw new DomainException("Salary Expense Account ID is missing or invalid.");
-                }
-                var cashAccountValue = _getSystemValues.GetSettingValue(systemSettings, "CashAccountId");
-                if (!Guid.TryParse(cashAccountValue, out var cashAccountId))
-                {
-                    _logger.LogError("Cash Account ID is missing or invalid in system settings.");
-                    throw new DomainException("Cash Account ID is missing or invalid.");
-                }
-
-                var journalEntry = await _journalEntryService.CreateSalaryJournalEntryAsync(employee, salary, request.CreatedBy, cancellationToken);
-                await journalEntryRepo.AddAsync(journalEntry, cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                _logger.LogInformation("Journal entry and salary committed successfully for EmployeeId: {EmployeeId}",
-                    request.Dto.EmployeeId);
+                _logger.LogInformation("Salary and Journal Entry committed for Employee {Id}. Net Pay: {Net}",
+                    employee.Id, salary.NetSalary);
 
                 return _mapper.Map<SalaryDto>(salary);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Transaction failed for Employee {Id}. Rolling back.", request.Dto.EmployeeId);
                 await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-                _logger.LogError(ex, "Error occurred while creating salary for EmployeeId: {EmployeeId}", request.Dto.EmployeeId);
                 throw;
             }
         }

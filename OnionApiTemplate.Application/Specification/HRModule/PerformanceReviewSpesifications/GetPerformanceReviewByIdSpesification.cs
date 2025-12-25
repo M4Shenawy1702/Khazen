@@ -7,7 +7,6 @@
             : base(p => p.Id == Id)
         {
             AddInclude(p => p.Employee!);
-            AddInclude(p => p.Reviewer!);
         }
     }
 }

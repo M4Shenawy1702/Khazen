@@ -1,6 +1,6 @@
 ﻿namespace Khazen.Application.DOTs.HRModule.Department
 {
-    internal class DepartmentDto
+    public class DepartmentDto
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;

@@ -9,11 +9,14 @@ namespace Khazen.Application.MappingProfile.AccountingModule
         public JournalEntryProfile()
         {
             CreateMap<JournalEntry, JournalEntryDto>()
-                .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
+                 .ForMember(dest => dest.Lines, opt => opt.MapFrom(src => src.Lines));
+
             CreateMap<JournalEntry, JournalEntryDetailsDto>();
+
             CreateMap<CreateJournalEntryCommand, JournalEntry>();
 
             CreateMap<JournalEntryLine, JournalEntryLineDto>();
+
             CreateMap<CreateJournalEntryLineDto, JournalEntryLine>();
         }
     }

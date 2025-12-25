@@ -7,8 +7,8 @@ namespace Khazen.Application.MappingProfile.UserModule
         public ApplicationUserProfile()
         {
             CreateMap<ApplicationUser, ApplicationUserDto>();
-            CreateMap<IdentityRole, RoleDto>();
-            CreateMap<IdentityRole, RoleDetailsDto>();
+            CreateMap<ApplicationRole, RoleDto>();
+            CreateMap<ApplicationRole, RoleDetailsDto>();
 
         }
     }

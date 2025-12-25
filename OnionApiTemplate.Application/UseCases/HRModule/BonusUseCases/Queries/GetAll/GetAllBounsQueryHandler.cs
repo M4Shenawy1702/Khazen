@@ -1,5 +1,7 @@
 ﻿using Khazen.Application.BaseSpecifications.HRModule.BounsSpecifications;
+using Khazen.Application.Common;
 using Khazen.Application.DOTs.HRModule.BonusDtos;
+using Khazen.Application.Specification.HRModule.BounsSpecifications;
 using Khazen.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -10,14 +12,14 @@ namespace Khazen.Application.UseCases.HRModule.BonusUseCases.Queries.GetAll
         IMapper mapper,
         ILogger<GetAllBounsQueryHandler> logger,
         IValidator<GetAllBounsQuery> validator
-    ) : IRequestHandler<GetAllBounsQuery, IEnumerable<BonusDto>>
+    ) : IRequestHandler<GetAllBounsQuery, PaginatedResult<BonusDto>>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<GetAllBounsQueryHandler> _logger = logger;
         private readonly IValidator<GetAllBounsQuery> _validator = validator;
 
-        public async Task<IEnumerable<BonusDto>> Handle(GetAllBounsQuery request, CancellationToken cancellationToken)
+        public async Task<PaginatedResult<BonusDto>> Handle(GetAllBounsQuery request, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Fetching all bonuses with query parameters: {@QueryParameters}", request.QueryParameters);
 
@@ -31,15 +33,15 @@ namespace Khazen.Application.UseCases.HRModule.BonusUseCases.Queries.GetAll
 
                     throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
                 }
-                var bonusRepo = _unitOfWork.GetRepository<Bonus, int>();
+                var bonusRepo = _unitOfWork.GetRepository<Bonus, Guid>();
 
                 var bonuses = await bonusRepo.GetAllAsync(new GetAllBounsSpecification(request.QueryParameters), cancellationToken, true);
+                var data = _mapper.Map<IEnumerable<BonusDto>>(bonuses);
 
-                var result = _mapper.Map<IEnumerable<BonusDto>>(bonuses);
+                var count = await bonusRepo.GetCountAsync(new GetAllBounsCountSpecification(), cancellationToken);
+                _logger.LogInformation("Successfully retrieved {Count} bonus records.", data.Count());
 
-                _logger.LogInformation("Successfully retrieved {Count} bonus records.", result.Count());
-
-                return result;
+                return new PaginatedResult<BonusDto>(request.QueryParameters.PageIndex, request.QueryParameters.PageSize, count, data); ;
             }
             catch (Exception ex)
             {

@@ -30,13 +30,13 @@ namespace Khazen.Application.UseCases.HRModule.AdvanceUseCases.Commands.Toggle
                     _logger.LogWarning("Advance with ID {AdvanceId} not found.", request.Id);
                     throw new NotFoundException<Advance>(request.Id);
                 }
-                var user = await _userManager.FindByNameAsync(request.ModifiedBy);
+                var user = await _userManager.FindByNameAsync(request.ToggleBy);
                 if (user is null)
                 {
-                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.ModifiedBy);
-                    throw new NotFoundException<ApplicationUser>(request.ModifiedBy);
+                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.ToggleBy);
+                    throw new NotFoundException<ApplicationUser>(request.ToggleBy);
                 }
-                advance.Toggle(request.ModifiedBy);
+                advance.Toggle(request.ToggleBy);
 
                 _logger.LogInformation("Toggling Advance {AdvanceId}. New IsDeleted state: {IsDeleted}", advance.Id, advance.IsDeleted);
 

@@ -10,14 +10,9 @@ namespace Khazen.Presentation.Controllers.HRModule
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AdvancesController : ControllerBase
+    public class AdvancesController(IMediator mediator) : ControllerBase
     {
-        private readonly IMediator _mediator;
-
-        public AdvancesController(IMediator mediator)
-        {
-            _mediator = mediator;
-        }
+        private readonly IMediator _mediator = mediator;
 
         [HttpPost]
         public async Task<ActionResult<AdvanceDto>> AddAdvance(AddAdvanceDto dto)
@@ -34,8 +29,6 @@ namespace Khazen.Presentation.Controllers.HRModule
             var result = await _mediator.Send(new GetAllAdvanceQuery(QueryParameters));
             return Ok(result);
         }
-
-
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> ToggleAdvance(int id)

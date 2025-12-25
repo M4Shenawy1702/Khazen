@@ -1,6 +1,7 @@
 ﻿using Khazen.Application.Common.Interfaces;
 using Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Commands.Create;
 using Khazen.Domain.Common.Enums;
+using Khazen.Domain.Entities;
 using Khazen.Domain.Entities.AccountingModule;
 using Khazen.Domain.Entities.ConfigurationModule;
 using Khazen.Domain.Entities.PurchaseModule;
@@ -30,10 +31,10 @@ namespace Khazen.Application.Common.Services
         }
 
         public async Task<JournalEntry> CreateSalaryJournalEntryAsync(
-            Employee employee,
-            Salary salary,
-            string createdBy,
-            CancellationToken cancellationToken = default)
+        Employee employee,
+        Salary salary,
+        string createdBy,
+        CancellationToken cancellationToken = default)
         {
             var systemSettingsRepo = _unitOfWork.GetRepository<SystemSetting, int>();
             var systemSettings = await systemSettingsRepo.GetAllAsync(new GetAllSystemSettingsSpec(), cancellationToken);
@@ -46,45 +47,45 @@ namespace Khazen.Application.Common.Services
                 _logger.LogError("Salary Expense Account ID is missing or invalid.");
                 throw new ApplicationException("Salary Expense Account ID is missing or invalid.");
             }
+
             if (!Guid.TryParse(cashAccountValue, out var cashAccountId))
             {
                 _logger.LogError("Cash Account ID is missing or invalid.");
                 throw new ApplicationException("Cash Account ID is missing or invalid.");
             }
 
-            var journalEntry = new JournalEntry
-            {
-                CreatedAt = DateTime.UtcNow,
-                EntryDate = DateTime.UtcNow,
-                TransactionType = TransactionType.SalaryExpense,
-                Description = $"Salary for {employee.FirstName} {employee.LastName} - {salary.SalaryDate:MMMM yyyy}, created by '{createdBy}'",
-                JournalEntryNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken),
-                Lines = new List<JournalEntryLine>
-                {
-                    new()
-                    {
-                        AccountId = salaryExpenseAccountId,
-                        Debit = salary.NetSalary,
-                        Credit = 0m,
-                        Description = "Salary Expense"
-                    },
-                    new()
-                    {
-                        AccountId = cashAccountId,
-                        Debit = 0m,
-                        Credit = salary.NetSalary,
-                        Description = "Cash Payment"
-                    }
-                }
-            };
+            var journalNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken);
+
+            var journalEntry = new JournalEntry(
+                journalEntryNumber: journalNumber,
+                description: $"Salary for {employee.FirstName} {employee.LastName} - {salary.SalaryDate:MMMM yyyy}, created by '{createdBy}'",
+                entryDate: DateTime.UtcNow,
+                transactionType: TransactionType.SalaryExpense,
+                relatedEntityType: RelatedEntityType.SalaryExpense,
+                relatedEntityId: salary.Id,
+                createdBy: createdBy
+            );
+
+            var debitLine = new JournalEntryLine(salaryExpenseAccountId, salary.NetSalary, 0m, "Salary Expense");
+            debitLine.AttachToJournalEntry(journalEntry.Id);
+            journalEntry.Lines.Add(debitLine);
+
+            var creditLine = new JournalEntryLine(cashAccountId, 0m, salary.NetSalary, "Cash Payment");
+            creditLine.AttachToJournalEntry(journalEntry.Id);
+            journalEntry.Lines.Add(creditLine);
+
+            journalEntry.ValidateBalance();
 
             _logger.LogInformation("Journal entry created for salary ID {SalaryId}", salary.Id);
+
             return journalEntry;
         }
 
+
         public async Task<JournalEntry> GeneratePurchaseJournalEntryAsync(
-        PurchaseInvoice invoice,
-        CancellationToken cancellationToken)
+         PurchaseInvoice invoice,
+         string CreatedBy,
+         CancellationToken cancellationToken)
         {
             try
             {
@@ -97,34 +98,27 @@ namespace Khazen.Application.Common.Services
                 var purchasesAccountId = Guid.Parse(_getSystemValues.GetSettingValue(systemSettings, "PurchasesAccountId"));
                 var accountsPayableId = Guid.Parse(_getSystemValues.GetSettingValue(systemSettings, "AccountsPayableAccountId"));
 
-                var journal = new JournalEntry
-                {
-                    Id = Guid.NewGuid(),
-                    CreatedAt = DateTime.UtcNow,
-                    EntryDate = DateTime.UtcNow,
-                    Description = $"Purchase Invoice {invoice.InvoiceNumber}",
-                    JournalEntryNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken),
-                    TransactionType = TransactionType.PurchaseInvoice,
-                    RelatedEntityType = RelatedEntityType.PurchaseInvoice,
-                    RelatedEntityId = invoice.Id,
-                    Lines = new List<JournalEntryLine>()
-                };
+                var journalNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken);
 
-                journal.Lines.Add(new JournalEntryLine
-                {
-                    AccountId = purchasesAccountId,
-                    Debit = invoice.TotalAmount,
-                    Credit = 0,
-                    Description = "Purchases"
-                });
+                var journal = new JournalEntry(
+                    journalEntryNumber: journalNumber,
+                    description: $"Purchase Invoice {invoice.InvoiceNumber}",
+                    entryDate: DateTime.UtcNow,
+                    transactionType: TransactionType.PurchaseInvoice,
+                    relatedEntityType: RelatedEntityType.PurchaseInvoice,
+                    relatedEntityId: invoice.Id,
+                    createdBy: CreatedBy
+                );
 
-                journal.Lines.Add(new JournalEntryLine
-                {
-                    AccountId = accountsPayableId,
-                    Debit = 0,
-                    Credit = invoice.TotalAmount,
-                    Description = "Accounts Payable"
-                });
+                var debitLine = new JournalEntryLine(purchasesAccountId, invoice.TotalAmount, 0, "Purchases");
+                debitLine.AttachToJournalEntry(journal.Id);
+                journal.Lines.Add(debitLine);
+
+                var creditLine = new JournalEntryLine(accountsPayableId, 0, invoice.TotalAmount, "Accounts Payable");
+                creditLine.AttachToJournalEntry(journal.Id);
+                journal.Lines.Add(creditLine);
+
+                journal.ValidateBalance();
 
                 _logger.LogInformation(
                     "Purchase Journal Entry generated successfully for Invoice {InvoiceNo}.",
@@ -140,7 +134,11 @@ namespace Khazen.Application.Common.Services
             }
         }
 
-        public async Task<JournalEntry> GenerateReversalPurchaseInvoiceAsync(PurchaseInvoice invoice, CancellationToken cancellationToken)
+
+        public async Task<JournalEntry> GenerateReversalPurchaseInvoiceAsync(
+            PurchaseInvoice invoice,
+            string CreatedBy,
+            CancellationToken cancellationToken)
         {
             try
             {
@@ -153,34 +151,22 @@ namespace Khazen.Application.Common.Services
                 var purchasesAccountId = Guid.Parse(_getSystemValues.GetSettingValue(systemSettings, "PurchasesAccountId"));
                 var accountsPayableId = Guid.Parse(_getSystemValues.GetSettingValue(systemSettings, "AccountsPayableAccountId"));
 
-                var reversalEntry = new JournalEntry
-                {
-                    EntryDate = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow,
-                    Description = $"Reversal of Purchase Invoice {invoice.InvoiceNumber}",
-                    JournalEntryNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken),
-                    TransactionType = TransactionType.PurchaseInvoiceReversal,
-                    RelatedEntityType = RelatedEntityType.PurchaseInvoice,
-                    RelatedEntityId = invoice.Id,
-                    Lines = new List<JournalEntryLine>
-                        {
-                            new JournalEntryLine
-                            {
-                                AccountId = accountsPayableId,
-                                Debit = invoice.TotalAmount,
-                                Credit = 0
-                            },
-                            new JournalEntryLine
-                            {
-                                AccountId = purchasesAccountId,
-                                Debit = 0,
-                                Credit = invoice.TotalAmount
-                            }
-                        }
-                };
+                var journalNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken);
+
+                var reversalEntry = invoice.JournalEntry!.CreateReversal(CreatedBy, $"Reversed Purchase invoice JE for Purchase invoice JE-Number : {invoice.JournalEntry.JournalEntryNumber}");
+
+                var debitLine = new JournalEntryLine(accountsPayableId, invoice.TotalAmount, 0, "Accounts Payable Reversal");
+                debitLine.AttachToJournalEntry(reversalEntry.Id);
+                reversalEntry.Lines.Add(debitLine);
+
+                var creditLine = new JournalEntryLine(purchasesAccountId, 0, invoice.TotalAmount, "Purchases Reversal");
+                creditLine.AttachToJournalEntry(reversalEntry.Id);
+                reversalEntry.Lines.Add(creditLine);
+
+                reversalEntry.ValidateBalance();
 
                 _logger.LogInformation(
-                    "Purchase Journal Entry generated successfully for Invoice {InvoiceNo}.",
+                    "Purchase Reversal Journal Entry generated successfully for Invoice {InvoiceNo}.",
                     invoice.InvoiceNumber
                 );
 
@@ -192,7 +178,13 @@ namespace Khazen.Application.Common.Services
                 throw;
             }
         }
-        public async Task<JournalEntry> CreatePurchasePaymentEntryAsync(PurchaseInvoice invoice, decimal amount, PaymentMethod method, CancellationToken cancellationToken)
+
+        public async Task<JournalEntry> CreatePurchasePaymentEntryAsync(
+        PurchaseInvoice invoice,
+        string CreatedBy,
+        decimal amount,
+        PaymentMethod method,
+        CancellationToken cancellationToken)
         {
             var systemSettings = await _unitOfWork
                 .GetRepository<SystemSetting, int>()
@@ -204,37 +196,38 @@ namespace Khazen.Application.Common.Services
 
             var creditAccountId = method == PaymentMethod.Cash ? cashAccountId : bankAccountId;
 
-            var entry = new JournalEntry
-            {
-                CreatedAt = DateTime.UtcNow,
-                EntryDate = DateTime.UtcNow,
-                Description = $"Payment for Purchase Invoice {invoice.InvoiceNumber}",
-                JournalEntryNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken),
-                TransactionType = TransactionType.PurchasePayment,
-                RelatedEntityId = invoice.Id,
-                RelatedEntityType = RelatedEntityType.PurchaseInvoice,
-                Lines =
-                [
-                    new JournalEntryLine
-            {
-                AccountId = accountsPayableId,
-                Debit = amount,
-                Credit = 0
-            },
+            var journalNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken);
 
-            new JournalEntryLine
-            {
-                AccountId = creditAccountId,
-                Debit = 0,
-                Credit = amount
-            }
-                ]
-            };
+            var entry = new JournalEntry(
+                journalEntryNumber: journalNumber,
+                description: $"Payment for Purchase Invoice {invoice.InvoiceNumber}",
+                entryDate: DateTime.UtcNow,
+                transactionType: TransactionType.PurchasePayment,
+                relatedEntityType: RelatedEntityType.PurchaseInvoicePayment,
+                    relatedEntityId: invoice.Id,
+                    createdBy: CreatedBy
+            );
+
+            var debitLine = new JournalEntryLine(accountsPayableId, amount, 0, "Accounts Payable");
+            debitLine.AttachToJournalEntry(entry.Id);
+            entry.Lines.Add(debitLine);
+
+            var creditLine = new JournalEntryLine(creditAccountId, 0, amount, method.ToString());
+            creditLine.AttachToJournalEntry(entry.Id);
+            entry.Lines.Add(creditLine);
+
+            entry.ValidateBalance();
 
             await _unitOfWork.GetRepository<JournalEntry, Guid>().AddAsync(entry, cancellationToken);
+
             return entry;
         }
-        public async Task<JournalEntry> CreatePrchasePaymentReversalJournalAsync(PurchasePayment payment, PurchaseInvoice invoice, CancellationToken cancellationToken)
+
+        public async Task<JournalEntry> CreatePurchasePaymentReversalJournalAsync(
+            PurchasePayment payment,
+            PurchaseInvoice invoice,
+            string reversedBy,
+            CancellationToken cancellationToken)
         {
             if (payment is null)
                 throw new ArgumentNullException(nameof(payment), "Payment cannot be null.");
@@ -245,151 +238,93 @@ namespace Khazen.Application.Common.Services
             if (payment.JournalEntryId == Guid.Empty)
                 throw new BadRequestException("Cannot create reversal: original JournalEntryId is missing.");
 
-            var systemSettings = await _unitOfWork
-                .GetRepository<SystemSetting, int>()
-                .GetAllAsync(new GetAllSystemSettingsSpec(), cancellationToken);
+            var journalEntryRepo = _unitOfWork.GetRepository<JournalEntry, Guid>();
+            var originalEntry = await journalEntryRepo.GetByIdAsync(payment.JournalEntryId, cancellationToken);
 
-            if (systemSettings is null || !systemSettings.Any())
-                throw new BadRequestException("System settings are missing. Cannot create reversal journal entry.");
+            if (originalEntry is null)
+                throw new NotFoundException<JournalEntry>(payment.JournalEntryId);
 
+            var reversalEntry = originalEntry.CreateReversal(reversedBy, $"Reversed JE for JE-Number : {originalEntry.JournalEntryNumber}");
 
+            reversalEntry.JournalEntryNumber = await _numberSequenceService
+                .GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken);
 
-            var accountCashId = GetSafeSystemGuid("CashAccountId", systemSettings);
-            var accountBankId = GetSafeSystemGuid("BankAccountId", systemSettings);
-            var accountPayableId = GetSafeSystemGuid("AccountsPayableAccountId", systemSettings);
+            reversalEntry.RelatedEntityId = invoice.Id;
+            reversalEntry.RelatedEntityType = RelatedEntityType.PurchaseInvoice;
 
+            reversalEntry.ValidateBalance();
 
-            var reversalAccountId = payment.Method == PaymentMethod.Cash
-                ? accountCashId
-                : accountBankId;
-
-
-            var lines = new List<JournalEntryLine>
-                    {
-
-                        new JournalEntryLine
-                        {
-                            AccountId = reversalAccountId,
-                            Debit = payment.Amount,
-                            Credit = 0
-                        },
-
-                            new JournalEntryLine
-                        {
-                            AccountId = accountPayableId,
-                            Debit = 0,
-                            Credit = payment.Amount
-                        }
-                    };
-
-
-            var journalEntry = new JournalEntry
-            {
-                EntryDate = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-                Description = $"Reversal of Payment {payment.Id} for Invoice {invoice.InvoiceNumber}",
-                JournalEntryNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken),
-                TransactionType = TransactionType.PurchaseInvoiceReversal,
-                ReversalOfJournalEntryId = payment.JournalEntryId,
-                Lines = lines
-            };
-
-            return journalEntry;
-        }
-        Guid GetSafeSystemGuid(string key, IEnumerable<SystemSetting> systemSettings)
-        {
-            var value = _getSystemValues.GetSettingValue(systemSettings, key);
-
-            if (string.IsNullOrWhiteSpace(value))
-                throw new BadRequestException($"System setting '{key}' is missing.");
-
-            if (!Guid.TryParse(value, out Guid result))
-                throw new BadRequestException($"System setting '{key}' contains invalid GUID value.");
-
-            return result;
+            return reversalEntry;
         }
 
-        public async Task CreateSalesInvoiceJournalAsync(SalesInvoice salesInvoice, CancellationToken cancellationToken)
+        public async Task CreateSalesInvoiceJournalAsync(
+            SalesInvoice invoice,
+            string CreatedBy,
+            CancellationToken cancellationToken)
         {
             _logger.LogInformation(
                 "Starting journal entry creation for SalesInvoice {InvoiceId} (InvoiceNumber: {InvoiceNumber})",
-                salesInvoice.Id, salesInvoice.InvoiceNumber);
+                invoice.Id, invoice.InvoiceNumber);
 
             var systemSettingsRepo = _unitOfWork.GetRepository<SystemSetting, int>();
             var systemSettings = await systemSettingsRepo.GetAllAsync(new GetAllSystemSettingsSpec(), cancellationToken);
 
             Guid arAccountId = GetAccountGuid(systemSettings, "AccountsReceivableAccountId");
             Guid revenueAccountId = GetAccountGuid(systemSettings, "SalesRevenueAccountId");
-            Guid discountAccountId = _getSystemValues.GetSystemSettingGuid(systemSettings, "DiscountAllowedAccountId");
-            Guid taxAccountId = _getSystemValues.GetSystemSettingGuid(systemSettings, "TaxPayableAccountId");
+            Guid discountAccountId = GetAccountGuid(systemSettings, "DiscountAllowedAccountId");
+            Guid taxAccountId = GetAccountGuid(systemSettings, "TaxPayableAccountId");
 
-            _logger.LogDebug("System accounts resolved for Journal Entry. AR: {AR}, Revenue: {REV}, Discount: {DISC}, Tax: {TAX}",
+            _logger.LogDebug(
+                "System accounts resolved for Journal Entry. AR: {AR}, Revenue: {REV}, Discount: {DISC}, Tax: {TAX}",
                 arAccountId, revenueAccountId, discountAccountId, taxAccountId);
 
-            var journalEntry = new JournalEntry
+            var journalNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken);
+
+            var journalEntry = new JournalEntry(
+                journalEntryNumber: journalNumber,
+                description: $"Sales Invoice for Invoice {invoice.InvoiceNumber}",
+                entryDate: DateTime.UtcNow,
+                transactionType: TransactionType.SalesInvoice,
+                  relatedEntityType: RelatedEntityType.SalesInvoice,
+                    relatedEntityId: invoice.Id,
+                    createdBy: CreatedBy
+            )
             {
-                EntryDate = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-                Description = $"Sales Invoice for Invoice {salesInvoice.InvoiceNumber}",
-                JournalEntryNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken),
-                TransactionType = TransactionType.SalesInvoice,
                 RelatedEntityType = RelatedEntityType.SalesInvoice,
-                RelatedEntityId = salesInvoice.Id,
-                Lines = new List<JournalEntryLine>()
+                RelatedEntityId = invoice.Id
             };
 
-            journalEntry.Lines.Add(new JournalEntryLine
-            {
-                AccountId = arAccountId,
-                Debit = salesInvoice.GrandTotal.Round2(),
-                Credit = 0
-            });
+            var arLine = new JournalEntryLine(arAccountId, invoice.GrandTotal.Round2(), 0, "Accounts Receivable");
+            arLine.AttachToJournalEntry(journalEntry.Id);
+            journalEntry.Lines.Add(arLine);
 
-            journalEntry.Lines.Add(new JournalEntryLine
-            {
-                AccountId = revenueAccountId,
-                Debit = 0,
-                Credit = salesInvoice.SubTotal.Round2()
-            });
+            var revenueLine = new JournalEntryLine(revenueAccountId, 0, invoice.SubTotal.Round2(), "Sales Revenue");
+            revenueLine.AttachToJournalEntry(journalEntry.Id);
+            journalEntry.Lines.Add(revenueLine);
 
-            if (salesInvoice.DiscountAmount > 0 && discountAccountId != Guid.Empty)
+            if (invoice.DiscountAmount > 0 && discountAccountId != Guid.Empty)
             {
-                journalEntry.Lines.Add(new JournalEntryLine
-                {
-                    AccountId = discountAccountId,
-                    Debit = salesInvoice.DiscountAmount.Round2(),
-                    Credit = 0
-                });
+                var discountLine = new JournalEntryLine(discountAccountId, invoice.DiscountAmount.Round2(), 0, "Discount Allowed");
+                discountLine.AttachToJournalEntry(journalEntry.Id);
+                journalEntry.Lines.Add(discountLine);
             }
 
-            if (salesInvoice.TaxAmount > 0 && taxAccountId != Guid.Empty)
+            if (invoice.TaxAmount > 0 && taxAccountId != Guid.Empty)
             {
-                journalEntry.Lines.Add(new JournalEntryLine
-                {
-                    AccountId = taxAccountId,
-                    Debit = 0,
-                    Credit = salesInvoice.TaxAmount.Round2()
-                });
+                var taxLine = new JournalEntryLine(taxAccountId, 0, invoice.TaxAmount.Round2(), "Tax Payable");
+                taxLine.AttachToJournalEntry(journalEntry.Id);
+                journalEntry.Lines.Add(taxLine);
             }
 
-            var totalDebit = journalEntry.Lines.Sum(x => x.Debit);
-            var totalCredit = journalEntry.Lines.Sum(x => x.Credit);
-
-            if (totalDebit != totalCredit)
-            {
-                _logger.LogError(
-                    "Journal entry imbalance detected for Invoice {InvoiceId}. Debit: {Debit}, Credit: {Credit}",
-                    salesInvoice.Id, totalDebit, totalCredit);
-
-                throw new BadRequestException("Journal entry is not balanced.");
-            }
+            journalEntry.ValidateBalance();
 
             _logger.LogInformation(
                 "Journal entry {JournalNumber} created successfully for Invoice {InvoiceId}. Debit = Credit = {Total}",
-                journalEntry.JournalEntryNumber, salesInvoice.Id, totalDebit);
+                journalEntry.JournalEntryNumber, invoice.Id, journalEntry.Lines.Sum(l => l.Debit));
 
-            salesInvoice.JournalEntry = journalEntry;
+            invoice.JournalEntry = journalEntry;
         }
+
 
 
         private Guid GetAccountGuid(IEnumerable<SystemSetting> settings, string key)
@@ -405,10 +340,11 @@ namespace Khazen.Application.Common.Services
         }
 
         public async Task<JournalEntry> CreateSalesInvoicePaymentJournalAsync(
-             SalesInvoice salesInvoice,
-             CreateSalesInvoicePaymentCommand request,
-             IEnumerable<SystemSetting> systemSettings,
-             CancellationToken cancellationToken)
+    SalesInvoice invoice,
+    string CreatedBy,
+    CreateSalesInvoicePaymentCommand request,
+    IEnumerable<SystemSetting> systemSettings,
+    CancellationToken cancellationToken)
         {
             if (request.Dto.Amount <= 0)
             {
@@ -424,62 +360,178 @@ namespace Khazen.Application.Common.Services
 
             _logger.LogInformation(
                 "Creating sales payment journal entry for Invoice {InvoiceNumber}, Amount {Amount}, Method {Method}",
-                salesInvoice.InvoiceNumber,
+                invoice.InvoiceNumber,
                 request.Dto.Amount,
                 request.Dto.Method);
 
-            var journalEntry = new JournalEntry
+            var journalNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken);
+
+            var journalEntry = new JournalEntry(
+               journalEntryNumber: journalNumber,
+               description: $"Sales Payment for Invoice {invoice.InvoiceNumber}",
+               entryDate: DateTime.UtcNow,
+               transactionType: TransactionType.SalesPayment,
+                                   relatedEntityType: RelatedEntityType.SalesInvoicePayment,
+                    relatedEntityId: invoice.Id,
+                    createdBy: CreatedBy
+           )
             {
-                Id = Guid.NewGuid(),
-                EntryDate = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-                Description = $"Sales Payment for Invoice {salesInvoice.InvoiceNumber}",
-                JournalEntryNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken),
-                TransactionType = TransactionType.SalesPayment,
-                CreatedBy = request.CreatedBy ?? "System",
-                Lines = new List<JournalEntryLine>
-        {
-            new JournalEntryLine
-            {
-                AccountId = accountId,
-                Debit = request.Dto.Amount,
-                Credit = 0
-            },
-            new JournalEntryLine
-            {
-                AccountId = receivableAccountId,
-                Debit = 0,
-                Credit = request.Dto.Amount
-            }
-        }
+                CreatedBy = request.CreatedBy ?? "System"
             };
 
+            var debitLine = new JournalEntryLine(accountId, request.Dto.Amount, 0m, "Cash/Bank Payment");
+            debitLine.AttachToJournalEntry(journalEntry.Id);
+            journalEntry.Lines.Add(debitLine);
+
+            var creditLine = new JournalEntryLine(receivableAccountId, 0m, request.Dto.Amount, "Accounts Receivable");
+            creditLine.AttachToJournalEntry(journalEntry.Id);
+            journalEntry.Lines.Add(creditLine);
+
+            journalEntry.ValidateBalance();
+
             _logger.LogInformation(
-                "Journal entry created successfully with number {JournalEntryNumber} for invoice {Invoice}",
+                "Journal entry created successfully with number {JournalEntryNumber} for invoice {InvoiceNumber}",
                 journalEntry.JournalEntryNumber,
-                salesInvoice.InvoiceNumber);
+                invoice.InvoiceNumber);
 
             return journalEntry;
         }
-        public async Task<JournalEntry> CreateReverseSalesPaymenttJournalEntry(SalesInvoicePayment payment, CancellationToken cancellationToken)
+
+        public async Task<JournalEntry> CreateReverseSalesPaymentJournalEntry(SalesInvoicePayment payment, string CreatedBy, CancellationToken cancellationToken)
         {
-            return new JournalEntry
+            if (payment.JournalEntry == null)
+                throw new BadRequestException($"No journal entry found for payment {payment.Id}");
+
+            var journalNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken);
+
+            var reversalEntry = new JournalEntry(
+                journalEntryNumber: journalNumber,
+                description: $"Reversal of Sales Payment {payment.Id}",
+                entryDate: DateTime.UtcNow,
+                transactionType: TransactionType.SalesPaymentReversal,
+                                    relatedEntityType: RelatedEntityType.PurchaseInvoice,
+                    relatedEntityId: payment.Id,
+                    createdBy: CreatedBy
+            );
+
+            foreach (var line in payment.JournalEntry.Lines)
             {
-                Id = Guid.NewGuid(),
-                EntryDate = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-                Description = $"Reversal of Sales Payment {payment.Id}",
-                TransactionType = TransactionType.SalesPaymentReversal,
-                JournalEntryNumber = await _numberSequenceService.GetNextNumber("JE", DateTime.UtcNow.Year, cancellationToken),
-                Lines = payment.JournalEntry!.Lines
-                                    .Select(line => new JournalEntryLine
-                                    {
-                                        AccountId = line.AccountId,
-                                        Debit = line.Credit,
-                                        Credit = line.Debit
-                                    }).ToList()
+                var reversalLine = new JournalEntryLine(
+                    accountId: line.AccountId,
+                    debit: line.Credit,
+                    credit: line.Debit,
+                    description: $"Reversal of line {line.Id}"
+                );
+
+                reversalLine.AttachToJournalEntry(reversalEntry.Id);
+                reversalEntry.Lines.Add(reversalLine);
+            }
+
+            reversalEntry.ValidateBalance();
+
+            return reversalEntry;
+        }
+
+        public void UpdateBalances(IEnumerable<Account> accounts, JournalEntry entry)
+        {
+            var accountsDict = accounts.ToDictionary(a => a.Id, a => a);
+            foreach (var line in entry.Lines)
+            {
+                var account = accountsDict[line.AccountId];
+
+                decimal amountChange = 0m;
+
+                switch (account.AccountType)
+                {
+                    case AccountType.Asset:
+                    case AccountType.Expense:
+                        amountChange = line.Debit - line.Credit;
+                        account.Balance += amountChange;
+                        break;
+
+                    case AccountType.Liability:
+                    case AccountType.Revenue:
+                    case AccountType.Equity:
+                        amountChange = line.Credit - line.Debit;
+                        account.Balance += amountChange;
+                        break;
+                }
+
+                account.ModifiedAt = DateTime.UtcNow;
+
+                if (account.SafeId.HasValue && account.Safe != null)
+                {
+                    account.Safe.Balance += amountChange;
+
+                    var safeTransaction = new SafeTransaction
+                    {
+                        SafeId = account.SafeId.Value,
+                        Date = DateTime.UtcNow,
+                        Amount = Math.Abs(amountChange),
+                        Type = GetSafeTransactionType(entry.TransactionType, amountChange),
+                        JournalEntryId = entry.Id,
+                        Note = $"Journal Entry {entry.JournalEntryNumber} affecting account {account.Code}",
+                        SourceId = entry.Id,
+                        SourceType = GetTransactionSourceType(entry.TransactionType)
+                    };
+
+                    account.Safe.SafeTransactions.Add(safeTransaction);
+                }
+            }
+        }
+        public void ReverseUpdateBalances(IEnumerable<Account> accounts, JournalEntry reversedEntry)
+        {
+            var accountsDict = accounts.ToDictionary(a => a.Id, a => a);
+
+            foreach (var line in reversedEntry.Lines)
+            {
+                var account = accountsDict[line.AccountId];
+
+                decimal amountChange = 0m;
+
+                switch (account.AccountType)
+                {
+                    case AccountType.Asset:
+                    case AccountType.Expense:
+                        amountChange = line.Debit - line.Credit;
+                        break;
+
+                    case AccountType.Liability:
+                    case AccountType.Revenue:
+                    case AccountType.Equity:
+                        amountChange = line.Credit - line.Debit;
+                        break;
+                }
+
+                account.Balance += amountChange;
+
+                if (account.SafeId.HasValue && account.Safe != null)
+                {
+                    account.Safe.Balance += amountChange;
+                }
+            }
+        }
+        private SafeTransactionType GetSafeTransactionType(TransactionType transactionType, decimal amountChange)
+        {
+            return transactionType switch
+            {
+                TransactionType.SalesPayment => amountChange > 0 ? SafeTransactionType.SalesPayment : SafeTransactionType.SalesPaymentReversal,
+                TransactionType.PurchasePayment => amountChange > 0 ? SafeTransactionType.PurchasePayment : SafeTransactionType.PurchasePaymentReversal,
+                _ => SafeTransactionType.Transfer
             };
         }
+
+        private TransactionSourceType GetTransactionSourceType(TransactionType transactionType)
+        {
+            return transactionType switch
+            {
+                TransactionType.SalesPayment => TransactionSourceType.SalesInvoicePayment,
+                TransactionType.PurchasePayment => TransactionSourceType.PurchaseInvoicePayment,
+                TransactionType.SalaryExpense => TransactionSourceType.Salary,
+                _ => TransactionSourceType.Transfer
+            };
+        }
+
     }
     public static class DecimalExtensions
     {

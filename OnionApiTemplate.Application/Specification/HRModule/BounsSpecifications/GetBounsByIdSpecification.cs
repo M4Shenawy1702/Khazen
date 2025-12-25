@@ -5,7 +5,7 @@ namespace Khazen.Application.Specification.HRModule.BounsSpecifications
     internal class GetBounsByIdSpecification
         : BaseSpecifications<Bonus>
     {
-        public GetBounsByIdSpecification(int Id)
+        public GetBounsByIdSpecification(Guid Id)
             : base(c => c.Id == Id)
         {
         }

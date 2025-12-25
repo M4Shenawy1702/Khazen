@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.HRModule.SalaryUseCases.Commands.Create
 {
-    public record CreateSalaryCommand(CreateSalaryDto Dto, string CreatedBy) : IRequest<SalaryDto>;
+    public record CreateSalaryCommand(CreateSalaryDto Dto, string CurrentUserId) : IRequest<SalaryDto>;
 }

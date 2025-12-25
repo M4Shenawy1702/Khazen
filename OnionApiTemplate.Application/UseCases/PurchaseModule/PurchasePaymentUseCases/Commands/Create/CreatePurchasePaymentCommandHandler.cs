@@ -77,6 +77,7 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchasePaymentUseCases.Com
 
                 var payment = await _paymentService.CreatePaymentAsync(
                     invoice,
+                    user.UserName!,
                     request.Dto,
                     cancellationToken);
 

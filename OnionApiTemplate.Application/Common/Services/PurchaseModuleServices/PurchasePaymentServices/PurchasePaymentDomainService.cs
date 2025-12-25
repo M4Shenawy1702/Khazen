@@ -23,7 +23,7 @@ namespace Khazen.Application.Common.Services.PurchaseModuleServices.PurchasePaym
         private readonly IJournalEntryService _journalEntryService = journalEntryService;
         private readonly ILogger<PurchasePaymentDomainService> _logger = logger;
 
-        public async Task<PurchasePayment> CreatePaymentAsync(PurchaseInvoice invoice, CreatePurchasePaymentDto Dto, CancellationToken cancellationToken)
+        public async Task<PurchasePayment> CreatePaymentAsync(PurchaseInvoice invoice, string CreatedBy, CreatePurchasePaymentDto Dto, CancellationToken cancellationToken)
         {
             _logger.LogInformation(
                 "Start CreatePaymentAsync | InvoiceId={InvoiceId}, Amount={Amount}, Method={Method}, CurrentPaid={Paid}, Total={Total}",
@@ -56,7 +56,7 @@ namespace Khazen.Application.Common.Services.PurchaseModuleServices.PurchasePaym
 
             _logger.LogDebug("Creating Journal Entry for payment | InvoiceId={InvoiceId}", invoice.Id);
             var journalEntry = await _journalEntryService.CreatePurchasePaymentEntryAsync(
-                invoice, Dto.Amount, Dto.Method, cancellationToken);
+                invoice, CreatedBy, Dto.Amount, Dto.Method, cancellationToken);
 
             var safeKey = Dto.Method == PaymentMethod.Cash ? "CashSafeId" : "BankSafeId";
             var safeId = Guid.Parse(_systemValues.GetSettingValue(systemSettings, safeKey));

@@ -11,6 +11,7 @@ namespace Khazen.Infrastructure.Persistence.Repositories
         private IDbContextTransaction? _transaction;
 
         private readonly Dictionary<Type, object> _repositories = [];
+        public DbContext Context => _context;
         public IGenericRepository<TEntity, TKey> GetRepository<TEntity, TKey>()
             where TEntity : BaseEntity<TKey>
         {

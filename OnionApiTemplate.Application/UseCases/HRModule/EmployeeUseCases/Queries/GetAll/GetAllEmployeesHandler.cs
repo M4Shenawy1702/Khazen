@@ -16,23 +16,23 @@ namespace Khazen.Application.UseCases.HRModule.EmployeeUsecases.Queries.GetAll
 
         public async Task<PaginatedResult<EmployeeDto>> Handle(GetAllEmployeesQuery request, CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Starting GetAllEmployeesHandler with filters: {@QueryParameters}", request.queryParameters);
+            _logger.LogDebug("Starting GetAllEmployeesHandler with filters: {@QueryParameters}", request.QueryParameters);
 
             try
             {
                 var repo = _unitOfWork.GetRepository<Employee, Guid>();
-                var employees = await repo.GetAllAsync(new GetAllEmployeesSpecification(request.queryParameters), cancellationToken, true);
+                var employees = await repo.GetAllAsync(new GetAllEmployeesSpecification(request.QueryParameters), cancellationToken, true);
 
                 var employeeDtos = _mapper.Map<List<EmployeeDto>>(employees);
 
-                var count = await repo.GetCountAsync(new GetAllEmployeesCountSpecification(request.queryParameters), cancellationToken);
+                var count = await repo.GetCountAsync(new GetAllEmployeesCountSpecification(request.QueryParameters), cancellationToken);
 
                 _logger.LogInformation("Returning {Count} employees (PageIndex: {PageIndex}, PageSize: {PageSize})",
-                    employeeDtos.Count, request.queryParameters.PageIndex, request.queryParameters.PageSize);
+                    employeeDtos.Count, request.QueryParameters.PageIndex, request.QueryParameters.PageSize);
 
                 return new PaginatedResult<EmployeeDto>(
-                    request.queryParameters.PageIndex,
-                    request.queryParameters.PageSize,
+                    request.QueryParameters.PageIndex,
+                    request.QueryParameters.PageSize,
                     count,
                     employeeDtos
                 );

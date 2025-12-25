@@ -9,13 +9,13 @@ namespace Khazen.Application.UseCases.HRModule.SalaryUseCases.Queries.GetAll
         IUnitOfWork unitOfWork,
         IMapper mapper,
         ILogger<GetAllSalariesQueryHandler> logger)
-        : IRequestHandler<GetSalariesQuery, PaginatedResult<SalaryDto>>
+        : IRequestHandler<GetAllSalariesQuery, PaginatedResult<SalaryDto>>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<GetAllSalariesQueryHandler> _logger = logger;
 
-        public async Task<PaginatedResult<SalaryDto>> Handle(GetSalariesQuery request, CancellationToken cancellationToken)
+        public async Task<PaginatedResult<SalaryDto>> Handle(GetAllSalariesQuery request, CancellationToken cancellationToken)
         {
             _logger.LogInformation(
                 "Starting GetAllSalariesQuery with PageIndex: {PageIndex}, PageSize: {PageSize}, EmployeeId: {EmployeeId}, From: {From}, To: {To}",

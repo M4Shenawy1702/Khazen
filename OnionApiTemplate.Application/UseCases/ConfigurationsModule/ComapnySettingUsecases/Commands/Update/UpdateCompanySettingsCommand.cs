@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.ConfigurationsModule.ComapnySettingUsecases.Commands.Update
 {
-    public record UpdateCompanySettingsCommand(UpdateCompanySettingsDto Dto) : IRequest<CompanySettingDto>;
+    public record UpdateCompanySettingsCommand(UpdateCompanySettingsDto Dto, string ModifiedBy) : IRequest<CompanySettingDto>;
 }

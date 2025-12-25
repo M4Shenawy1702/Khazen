@@ -8,6 +8,6 @@ namespace Khazen.Application.DOTs.HRModule.AttendaceDtos
         public TimeOnly? CheckInTime { get; set; }
         public TimeOnly? CheckOutTime { get; set; }
         public string? Notes { get; set; }
-        public AttendanceStatus Status { get; set; }
+        public AttendanceStatus? Status { get; set; }
     }
 }

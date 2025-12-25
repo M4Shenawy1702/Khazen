@@ -5,15 +5,21 @@ using Khazen.Application.UseCases.HRModule.DeductionUseCases.Commands.Delete;
 using Khazen.Application.UseCases.HRModule.DeductionUseCases.Queries.GetAll;
 using Khazen.Application.UseCases.HRModule.DeductionUseCases.Queries.GetById;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Khazen.Presentation.Controllers.HRModule
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class DeductionsController(ISender sender) : ControllerBase
     {
         private readonly ISender _sender = sender;
+
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                         ?? throw new UnauthorizedAccessException("User identity not available.");
 
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] DeductionQueryParameters queryParameters)
@@ -22,25 +28,28 @@ namespace Khazen.Presentation.Controllers.HRModule
             return Ok(result);
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _sender.Send(new GetDeductionByIdQuery(id));
-            if (result == null) return NotFound();
             return Ok(result);
         }
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] AddDeductionDto dto)
         {
-            var result = await _sender.Send(new AddDeductionCommand(dto, User.Identity?.Name!));
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            var result = await _sender.Send(new AddDeductionCommand(dto, CurrentUserId));
+
+            return CreatedAtAction(
+                nameof(GetById),
+                new { id = result.Id },
+                result);
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> Toggle(Guid id)
         {
-            await _sender.Send(new ToggleDeductionCommand(id, User.Identity?.Name!));
+            await _sender.Send(new ToggleDeductionCommand(id, CurrentUserId));
             return NoContent();
         }
     }

@@ -8,12 +8,12 @@ namespace Khazen.Application.Common.Services.AuthenticationServices
 {
     public class UserRegistrationService(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager,
+        RoleManager<ApplicationRole> roleManager,
         ILogger<UserRegistrationService> logger)
         : IUserRegistrationService
     {
         private readonly UserManager<ApplicationUser> _userManager = userManager;
-        private readonly RoleManager<IdentityRole> _roleManager = roleManager;
+        private readonly RoleManager<ApplicationRole> _roleManager = roleManager;
         private readonly ILogger<UserRegistrationService> _logger = logger;
 
         public async Task<string> RegisterCustomerUserAsync(
@@ -62,7 +62,8 @@ namespace Khazen.Application.Common.Services.AuthenticationServices
                 Email = email,
                 PhoneNumber = phoneNumber,
                 FullName = fullName,
-                Address = address
+                Address = address,
+                UserType = UserType.Customer
             };
 
             _logger.LogInformation("Creating identity user: {UserName}", user.UserName);

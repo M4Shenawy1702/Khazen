@@ -21,58 +21,58 @@ namespace Khazen.Application.UseCases.HRModule.DeductionUseCases.Commands.Add
 
         public async Task<DeductionDto> Handle(AddDeductionCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Starting AddDeductionCommandHandler for EmployeeId: {EmployeeId}", request.Dto.EmployeeId);
+            var employeeId = request.Dto.EmployeeId;
+            var actorUserId = request.CurrentUserId;
+
+            _logger.LogDebug("Starting AddDeductionCommandHandler for EmployeeId: {EmployeeId}", employeeId);
 
             var validationResult = await _validator.ValidateAsync(request, cancellationToken);
             if (!validationResult.IsValid)
             {
-                _logger.LogWarning("Validation failed for AddDeductionCommand: {Errors}",
-                    string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
-                throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
+                var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
+                _logger.LogWarning("Validation failed for AddDeductionCommand: {Errors}", string.Join(", ", errors));
+                throw new BadRequestException(errors);
+            }
+
+            var employeeRepo = _unitOfWork.GetRepository<Employee, Guid>();
+            var employeeExists = await employeeRepo.GetAsync(new GetEmployeeByIdSpecification(employeeId), cancellationToken);
+
+            if (employeeExists is null)
+            {
+                _logger.LogWarning("Employee {EmployeeId} not found.", employeeId);
+                throw new NotFoundException<Employee>(employeeId);
+            }
+
+            var user = await _userManager.FindByIdAsync(actorUserId);
+            if (user is null)
+            {
+                _logger.LogWarning("Actor user not found. ActorId: {ActorId}", actorUserId);
+                throw new NotFoundException<ApplicationUser>(actorUserId);
             }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                var employeeRepo = _unitOfWork.GetRepository<Employee, Guid>();
-                var employee = await employeeRepo.GetAsync(new GetEmployeeByIdSpecification(request.Dto.EmployeeId), cancellationToken);
+                var deductionRepo = _unitOfWork.GetRepository<Deduction, Guid>();
+                var deduction = _mapper.Map<Deduction>(request.Dto);
 
-                if (employee is null)
-                {
-                    _logger.LogWarning("Employee {EmployeeId} not found.", request.Dto.EmployeeId);
-                    throw new NotFoundException<Employee>(request.Dto.EmployeeId);
-                }
-
-                _logger.LogDebug("Employee {EmployeeId} found. Creating deduction...", request.Dto.EmployeeId);
-
-                var user = await _userManager.FindByNameAsync(request.CreatedBy);
-                if (user is null)
-                {
-                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.CreatedBy);
-                    throw new NotFoundException<ApplicationUser>(request.CreatedBy);
-                }
-
-                var deductionRepo = _unitOfWork.GetRepository<Deduction, int>();
-                var deduction = employee.CreateDeduction(
-                    request.Dto.Amount,
-                    request.Dto.Reason ?? "Deduction",
-                    request.Dto.Date,
-                    request.CreatedBy);
+                deduction.CreatedBy = actorUserId;
+                deduction.CreatedAt = DateTime.UtcNow;
 
                 await deductionRepo.AddAsync(deduction, cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                _logger.LogInformation("Deduction created successfully for Employee {EmployeeId} by {CreatedBy}. DeductionId: {DeductionId}",
-                    request.Dto.EmployeeId, request.CreatedBy, deduction.Id);
+                _logger.LogInformation("Deduction created successfully for Employee {EmployeeId}. DeductionId: {DeductionId}",
+                    employeeId, deduction.Id);
 
                 return _mapper.Map<DeductionDto>(deduction);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while creating deduction for EmployeeId {EmployeeId}", request.Dto.EmployeeId);
                 await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-                throw new ApplicationException("An unexpected error occurred while adding the deduction.", ex);
+                _logger.LogError(ex, "Transaction rolled back. Error occurred while creating deduction for EmployeeId {EmployeeId}", employeeId);
+                throw;
             }
         }
     }

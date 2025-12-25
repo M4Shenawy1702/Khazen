@@ -1,46 +1,54 @@
-﻿using Khazen.Application.Common.QueryParameters;
+﻿using Khazen.Application.Common;
+using Khazen.Application.Common.QueryParameters;
 using Khazen.Application.DOTs.HRModule.BonusDtos;
 using Khazen.Application.UseCases.HRModule.BonusUseCases.Commands.Add;
 using Khazen.Application.UseCases.HRModule.BonusUseCases.Commands.Delete;
 using Khazen.Application.UseCases.HRModule.BonusUseCases.Queries.GetAll;
+using Khazen.Application.UseCases.HRModule.BonusUseCases.Queries.GetById;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Khazen.Presentation.Controllers.HRModule
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class BonusesController : ControllerBase
+    public class BonusesController(ISender sender) : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly ISender _sender = sender;
 
-        public BonusesController(IMediator mediator)
-        {
-            _mediator = mediator;
-        }
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                        ?? throw new UnauthorizedAccessException("User identity not available.");
 
         [HttpPost]
-        public async Task<ActionResult<BonusDto>> AddBonus(AddBonusDto dto)
+        public async Task<ActionResult<BonusDto>> GrantBonus([FromBody] AddBonusDto dto)
         {
-            var userName = User.Identity?.Name ?? "System";
-            var result = await _mediator.Send(new AddBonusCommand(dto, userName));
+            var command = new AddBonusCommand(dto, CurrentUserId);
+            var result = await _sender.Send(command);
+            return CreatedAtAction(nameof(GetBonusById), new { id = result.Id }, result);
+        }
+
+        [HttpGet("{id:guid}", Name = nameof(GetBonusById))]
+        public async Task<ActionResult<BonusDetailsDto>> GetBonusById(Guid id)
+        {
+            var result = _sender.Send(new GetBonusByIdQuery(id));
             return Ok(result);
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<BonusDto>>> GetAllBonuses(BonusQueryParameters queryParameters)
+        public async Task<ActionResult<PaginatedResult<BonusDto>>> GetAllBonuses([FromQuery] BonusQueryParameters queryParameters)
         {
-            var result = await _mediator.Send(new GetAllBounsQuery(queryParameters));
+            var result = await _sender.Send(new GetAllBounsQuery(queryParameters));
             return Ok(result);
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteBonus(int id)
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> ToggleDeleteBonus(Guid id)
         {
-            var userName = User.Identity?.Name;
-            if (userName == null) return BadRequest("User name is null");
-            var result = await _mediator.Send(new ToggleBonusCommand(id, userName));
-            return Ok(result);
+            var command = new ToggleBonusCommand(id, CurrentUserId);
+
+            await _sender.Send(command);
+            return NoContent();
         }
     }
 }

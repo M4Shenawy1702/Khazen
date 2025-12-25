@@ -16,6 +16,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 namespace Khazen.Presentation.Controllers.AuthenticationModule
 {
     [Route("api/[controller]")]
@@ -25,9 +26,9 @@ namespace Khazen.Presentation.Controllers.AuthenticationModule
     {
 
         [HttpPost("login")]
-        public async Task<ActionResult<AuthResponse>> Login([FromForm] LoginRequest request)
+        public async Task<ActionResult<AuthResponse>> Login([FromForm] LoginRequestDto Dto)
         {
-            var command = new LoginCommand(request.Email, request.Password);
+            var command = new LoginCommand(Dto);
             var response = await _mediator.Send(command);
 
             if (!string.IsNullOrEmpty(response.RefreshToken))
@@ -58,10 +59,17 @@ namespace Khazen.Presentation.Controllers.AuthenticationModule
 
         [HttpPost("change-password")]
         [Authorize]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand command)
+        public async Task<IActionResult> ChangePassword(
+            [FromBody] ChangePasswordDto Dto,
+            [FromHeader(Name = "If-Match")] string rowVersionBase64)
         {
-            var result = await _mediator.Send(command);
-            return Ok(new { Success = result, Message = "Password changed successfully." });
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+                return Unauthorized("User ID claim missing.");
+
+            var result = await _mediator.Send(new ChangePasswordCommand(userId, Dto, rowVersionBase64));
+
+            return Ok(result);
         }
 
         [HttpPost("forgot-password")]

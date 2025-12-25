@@ -12,13 +12,24 @@
 
         public AttendanceStatus Status { get; private set; } = AttendanceStatus.Absent;
         public string Notes { get; private set; } = string.Empty;
+        public string? ToggleBy { get; set; }
+        public DateTime? ToggledAt { get; set; }
 
         public void CheckIn(TimeOnly? time)
         {
-            CheckInTime = time ?? this.CheckInTime;
+            if (CheckInTime.HasValue && !CheckOutTime.HasValue)
+                throw new InvalidOperationException("Employee is already checked in.");
+
+            CheckInTime = time ?? TimeOnly.FromDateTime(DateTime.Now);
             Status = AttendanceStatus.Present;
         }
 
+        public void Toggle(string toggleBy)
+        {
+            IsDeleted = !IsDeleted;
+            ToggleBy = toggleBy;
+            ToggledAt = DateTime.UtcNow;
+        }
 
         public void CheckOut(TimeOnly? time)
         {
@@ -29,7 +40,10 @@
         {
             Status = AttendanceStatus.Leave;
             Notes = note ?? Notes;
+            CheckInTime = null;
+            CheckOutTime = null;
         }
+
         public void MarkAsAbsent()
         {
             Status = AttendanceStatus.Absent;

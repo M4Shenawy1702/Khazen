@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.HRModule.AttendanceUsecases.Commands.Absent
 {
-    public record AbsentCommand(AbsentDto Dto) : IRequest<AttendanceDto>;
+    public record AbsentCommand(AbsentDto Dto, string CurrentUserId) : IRequest<AttendanceDto>;
 }

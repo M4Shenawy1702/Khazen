@@ -28,7 +28,6 @@
 
   <ItemGroup>
     <Folder Include="Common\Interfaces\Persistence\" />
-    <Folder Include="UseCases\AuthenticationModule\AuthModule\Queries\" />
   </ItemGroup>
 
 </Project>

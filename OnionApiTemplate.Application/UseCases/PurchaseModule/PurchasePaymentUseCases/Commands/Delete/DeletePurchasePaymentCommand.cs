@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.PurchaseModule.PurchasePaymentUseCases.Commands.Delete
 {
-    public record DeletePurchasePaymentCommand(Guid Id, string ModifiedBy) : IRequest<PurchasePaymentDto>;
+    public record DeletePurchasePaymentCommand(Guid Id, string ReversedBy) : IRequest<PurchasePaymentDto>;
 }

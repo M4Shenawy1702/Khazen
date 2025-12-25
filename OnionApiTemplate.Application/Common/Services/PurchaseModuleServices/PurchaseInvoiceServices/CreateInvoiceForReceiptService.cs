@@ -40,7 +40,7 @@ namespace Khazen.Application.Common.Services.PurchaseModuleServices.PurchaseInvo
             //        UnitPrice = i.UnitPrice
             //    }).ToList()
             //};
-            var invoice = new PurchaseInvoice(receipt.Id, receipt.PurchaseOrder!.SupplierId, command.Dto.InvoiceNumber, command.CreatedBy, command.Dto.InvoiceDate, command.Dto.Notes);
+            var invoice = new PurchaseInvoice(receipt.Id, receipt.PurchaseOrder!.SupplierId, command.Dto.InvoiceNumber, command.CurrentUserId, command.Dto.InvoiceDate, command.Dto.Notes);
             foreach (var item in command.Dto.Items)
             {
                 invoice.AddItem(new PurchaseInvoiceItem
