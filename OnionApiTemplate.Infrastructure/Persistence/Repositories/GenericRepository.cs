@@ -8,7 +8,7 @@ namespace Khazen.Infrastructure.Persistence.Repositories
         : IGenericRepository<TEntity, TKey>
         where TEntity : BaseEntity<TKey>
     {
-        public async System.Threading.Tasks.Task AddAsync(TEntity entity, CancellationToken cancellationToken)
+        public async Task AddAsync(TEntity entity, CancellationToken cancellationToken)
             => await _context.Set<TEntity>().AddAsync(entity, cancellationToken);
 
         public void Update(TEntity entity)
@@ -35,6 +35,9 @@ namespace Khazen.Infrastructure.Persistence.Repositories
 
         public async Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken)
             => await _context.Set<TEntity>().FirstOrDefaultAsync(predicate, cancellationToken);
+
+        public async Task<TEntity?> FirstOrDefaultAsync(CancellationToken cancellationToken)
+            => await _context.Set<TEntity>().FirstOrDefaultAsync(cancellationToken);
 
         public async Task<TEntity?> SingleOrDefaultAsync(CancellationToken cancellationToken)
             => await _context.Set<TEntity>().SingleOrDefaultAsync(cancellationToken);

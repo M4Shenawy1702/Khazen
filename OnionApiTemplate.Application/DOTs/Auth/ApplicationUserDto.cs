@@ -12,6 +12,7 @@
         public Gender Gender { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime? LastLoginAt { get; set; }
-        public string Role { get; set; } = string.Empty;
+        public IEnumerable<string> UserRoles { get; set; } = new List<string>();
+        public string UserType { get; set; } = string.Empty;
     }
 }

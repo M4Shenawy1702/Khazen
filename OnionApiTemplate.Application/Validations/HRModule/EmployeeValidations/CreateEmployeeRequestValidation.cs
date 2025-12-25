@@ -1,4 +1,4 @@
-﻿using Khazen.Application.UseCases.HRModule.EmployeeUseCases.Commands.CreateEmployee;
+﻿using Khazen.Application.UseCases.HRModule.EmployeeUseCases.Commands.Create;
 
 namespace Khazen.Application.Validations.HRModule.EmployeeValidations
 {

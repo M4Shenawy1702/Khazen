@@ -16,7 +16,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Co
     IUnitOfWork unitOfWork,
     IMapper mapper,
     INumberSequenceService numberSequenceService,
-    ILogger<DeleteSalesInvoicePaymentHandler> logger, ISalesPaymentDomainService salesPaymentDomainService, IJournalEntryService journalEntryService, ISafeTransactionService safeTransactionService
+    ILogger<DeleteSalesInvoicePaymentHandler> logger, ISalesPaymentDomainService salesPaymentDomainService, IJournalEntryService journalEntryService, ISafeTransactionService safeTransactionService, UserManager<ApplicationUser> userManager
     ) : IRequestHandler<DeleteSalesInvoicePaymentCommand, SalesInvoicePaymentDto>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
@@ -26,11 +26,17 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Co
         private readonly ISalesPaymentDomainService _salesPaymentDomainService = salesPaymentDomainService;
         private readonly IJournalEntryService _journalEntryService = journalEntryService;
         private readonly ISafeTransactionService _safeTransactionService = safeTransactionService;
+        private readonly UserManager<ApplicationUser> _userManager = userManager;
 
         public async Task<SalesInvoicePaymentDto> Handle(DeleteSalesInvoicePaymentCommand request, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Starting reversal for SalesInvoicePayment {PaymentId}", request.Id);
-
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            if (user is null)
+            {
+                _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
             try
@@ -44,7 +50,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Co
                 }
 
                 _salesPaymentDomainService.ReversePayment(request, payment);
-                JournalEntry reversalJournal = await _journalEntryService.CreateReverseSalesPaymenttJournalEntry(payment, cancellationToken);
+                JournalEntry reversalJournal = await _journalEntryService.CreateReverseSalesPaymentJournalEntry(payment, user.UserName!, cancellationToken);
 
                 await _unitOfWork.GetRepository<JournalEntry, Guid>().AddAsync(reversalJournal, cancellationToken);
 

@@ -27,7 +27,10 @@ namespace Khazen.Presentation.Controllers.AuthenticationModule
         [HttpDelete("{roleId}")]
         public async Task<IActionResult> DeleteRole(string roleId)
         {
-            var result = await _sender.Send(new DeleteRoleCommand(roleId));
+            var userName = User.Identity?.Name;
+            if (userName == null)
+                return BadRequest("User not found");
+            var result = await _sender.Send(new ToggleRoleCommand(roleId, userName));
             return Ok(result);
         }
 

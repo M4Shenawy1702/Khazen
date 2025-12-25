@@ -1,6 +1,8 @@
-﻿using Khazen.Application.Common.Interfaces;
+﻿using Khazen.Application.Common.Configurations.Khazen.Infrastructure.Security.Recaptcha;
+using Khazen.Application.Common.Interfaces;
 using Khazen.Application.Common.Interfaces.Authentication;
-using Khazen.Application.Common.Interfaces.IHRModule;
+using Khazen.Application.Common.Interfaces.IHRModule.IEmployeeServices;
+using Khazen.Application.Common.Interfaces.IHRModule.ISalaryServices;
 using Khazen.Application.Common.Interfaces.IPurchaseModule.IPurchaseInvoice;
 using Khazen.Application.Common.Interfaces.IPurchaseModule.IPurchasePaymentServices;
 using Khazen.Application.Common.Interfaces.IPurchaseModule.IPurchaseReceipt;
@@ -10,7 +12,8 @@ using Khazen.Application.Common.Interfaces.ISalesModule.ISalesInvoiceServices;
 using Khazen.Application.Common.Interfaces.SalesModule.ISalesOrderModule;
 using Khazen.Application.Common.Services;
 using Khazen.Application.Common.Services.AuthenticationServices;
-using Khazen.Application.Common.Services.HRModuleServices;
+using Khazen.Application.Common.Services.HRModuleServices.EmployeeServices;
+using Khazen.Application.Common.Services.HRModuleServices.SalaryServices;
 using Khazen.Application.Common.Services.PurchaseModuleServices.PurchaseInvoiceServices;
 using Khazen.Application.Common.Services.PurchaseModuleServices.PurchasePaymentServices;
 using Khazen.Application.Common.Services.PurchaseModuleServices.PurchaseReceiptServices;
@@ -19,18 +22,18 @@ using Khazen.Application.Common.Services.SalesInvoicePaymentServices;
 using Khazen.Application.Common.Services.SalesOrderServices;
 using Khazen.Application.MappingProfile;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Khazen.Application
 {
     public static class ApplicationServiceRegistration
     {
-        public static IServiceCollection RegisterApplicationServices(this IServiceCollection services)
+        public static IServiceCollection RegisterApplicationServices(this IServiceCollection services, IConfiguration configuration)
         {
 
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ApplicationServiceRegistration).Assembly));
 
-            // Register all validators in the assembly
             services.AddValidatorsFromAssembly(typeof(ApplicationServiceRegistration).Assembly);
             services.AddAutoMapper(typeof(EmployeeProfile).Assembly);
             services.AddScoped<IPayslipGenerator, PayslipGenerator>();
@@ -64,7 +67,16 @@ namespace Khazen.Application
             services.AddScoped<ICacheService, RedisCacheService>();
             services.AddScoped<IPurchaseOrderStatusService, PurchaseOrderStatusService>();
             services.AddScoped<ISalaryDomainService, SalaryDomainService>();
+            services.AddScoped<IEmployeeDomainServices, EmployeeDomainServices>();
+            services.AddHttpClient<IRecaptchaService, RecaptchaService>(client =>
+            {
+            });
 
+
+            services.Configure<RecaptchaSettings>(
+                configuration.GetSection(RecaptchaSettings.SectionName));
+
+            services.AddScoped<IRecaptchaService, RecaptchaService>();
 
             return services;
         }

@@ -16,7 +16,7 @@ namespace Khazen.API
             // Add services to the container.
             builder.Services.AddInfrastructureServices(builder.Configuration);
             builder.Services.AddWebApplicationServices(builder.Configuration, builder.Host);
-            builder.Services.RegisterApplicationServices();
+            builder.Services.RegisterApplicationServices(builder.Configuration);
             builder.Services.AddHttpContextAccessor();
 
             builder.Services.Configure<JWTConfigurations>(builder.Configuration.GetSection("JWT"));
@@ -58,10 +58,10 @@ namespace Khazen.API
             app.UseHttpsRedirection();
             app.UseSerilogRequestLogging();
             app.UseCors();
-
+            app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
-            app.MapControllers();
+            app.MapControllers().RequireRateLimiting("GlobalControllerPolicy");
 
             await app.RunAsync();
         }

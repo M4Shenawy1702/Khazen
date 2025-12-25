@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.AccountingModule.JournalEntryUseCases.Commands.Create
 {
-    public record CreateJournalEntryCommand(CreateJournalEntryDto Dto) : IRequest<JournalEntryDto>;
+    public record CreateJournalEntryCommand(CreateJournalEntryDto Dto, string CreatedBy) : IRequest<JournalEntryDetailsDto>;
 }

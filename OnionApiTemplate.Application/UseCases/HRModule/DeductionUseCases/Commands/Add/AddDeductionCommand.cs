@@ -3,5 +3,5 @@ using Khazen.Application.DOTs.HRModule.DeductionDtos;
 
 namespace Khazen.Application.UseCases.HRModule.DeductionUseCases.Commands.Add
 {
-    public record AddDeductionCommand(AddDeductionDto Dto, string CreatedBy) : IRequest<DeductionDto>;
+    public record AddDeductionCommand(AddDeductionDto Dto, string CurrentUserId) : IRequest<DeductionDto>;
 }

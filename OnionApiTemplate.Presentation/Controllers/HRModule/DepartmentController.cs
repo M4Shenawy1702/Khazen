@@ -1,4 +1,7 @@
-﻿using Khazen.Application.Common.QueryParameters;
+﻿using Khazen.Application.Common;
+using Khazen.Application.Common.QueryParameters;
+using Khazen.Application.DOTs.HRModule.Department;
+using Khazen.Application.DOTs.HRModule.DepartmentDtos;
 using Khazen.Application.UseCases.HRModule.DepartmentUseCases.Commands.Create;
 using Khazen.Application.UseCases.HRModule.DepartmentUseCases.Commands.Delete;
 using Khazen.Application.UseCases.HRModule.DepartmentUseCases.Commands.Update;
@@ -6,55 +9,52 @@ using Khazen.Application.UseCases.HRModule.DepartmentUseCases.Queries.GetAll;
 using Khazen.Application.UseCases.HRModule.DepartmentUseCases.Queries.GetById;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Khazen.Presentation.Controllers.HRModule
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class DepartmentController(ISender sender)
-                : ControllerBase
+    public class DepartmentController(ISender sender) : ControllerBase
     {
-        private readonly ISender _Sender = sender;
+        private readonly ISender _sender = sender;
+
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                        ?? throw new UnauthorizedAccessException("User identity not available.");
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] DepartmentQueryParameters queryParameters)
+        public async Task<ActionResult<PaginatedResult<DepartmentDto>>> GetAll([FromQuery] DepartmentQueryParameters queryParameters)
         {
-            var query = new GetAllDepartmentQuery(queryParameters);
-            var departments = await _Sender.Send(query);
-            return Ok(departments);
+            var result = await _sender.Send(new GetAllDepartmentQuery(queryParameters));
+            return Ok(result);
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        [HttpGet("{id:guid}")]
+        public async Task<ActionResult<DepartmentDetailsDto>> GetById(Guid id)
         {
-            var query = new GetDepartmentByIdQuery(id);
-            var department = await _Sender.Send(query);
-            return Ok(department);
+            var result = await _sender.Send(new GetDepartmentByIdQuery(id));
+            return Ok(result);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateDepartmentCommand createCommand)
+        public async Task<ActionResult<DepartmentDetailsDto>> Create([FromBody] CreateDepartmentDto dto)
         {
-            var createdDepartment = await _Sender.Send(createCommand);
-            return CreatedAtAction(nameof(GetById), new { id = createdDepartment.Id }, createdDepartment);
-        }
-
-        [HttpPut]
-        public async Task<IActionResult> Update([FromBody] UpdateDepartmentCommand updateCommand)
-        {
-            var updatedResult = await _Sender.Send(updateCommand);
-            return Ok(updatedResult);
+            var result = await _sender.Send(new CreateDepartmentCommand(dto, CurrentUserId));
+            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<ActionResult<DepartmentDetailsDto>> Update(Guid id, [FromBody] UpdateDepartmentDto dto)
         {
-            var user = User.Identity?.Name;
-            if (user == null)
-                return BadRequest("User not found");
-            var command = new ToggleDepartmentCommand(id, user);
-            var deleted = await _Sender.Send(command);
-            return Ok(deleted);
+            var result = await _sender.Send(new UpdateDepartmentCommand(id, dto, CurrentUserId));
+            return Ok(result);
+        }
+
+        [HttpDelete("{id:guid}")]
+        public async Task<ActionResult<bool>> Toggle(Guid id)
+        {
+            var result = await _sender.Send(new ToggleDepartmentCommand(id, CurrentUserId));
+            return Ok(result);
         }
     }
 }

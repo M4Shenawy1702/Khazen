@@ -7,6 +7,7 @@
     "AccountType": 0,
     "ParentId": null,
     "Balance": 10000,
+    "SafeId": "11111111-1111-1111-1111-111111111111",
     "CreatedBy": "System"
   },
   {
@@ -17,6 +18,7 @@
     "AccountType": 0,
     "ParentId": null,
     "Balance": 25000,
+    "SafeId": "22222222-2222-2222-2222-222222222222",
     "CreatedBy": "System"
   },
   {
@@ -27,6 +29,7 @@
     "AccountType": 0,
     "ParentId": null,
     "Balance": 0,
+    "SafeId": null,
     "CreatedBy": "System"
   },
   {
@@ -37,26 +40,7 @@
     "AccountType": 1,
     "ParentId": null,
     "Balance": 0,
-    "CreatedBy": "System"
-  },
-  {
-    "Id": "22222222-2222-2222-2222-222222222222",
-    "Code": "AC-2100",
-    "Name": "Salaries Payable",
-    "Description": "Pending salary obligations",
-    "AccountType": 1,
-    "ParentId": null,
-    "Balance": 0,
-    "CreatedBy": "System"
-  },
-  {
-    "Id": "22222222-2222-2222-2222-222222222223",
-    "Code": "AC-2200",
-    "Name": "Tax Payable",
-    "Description": "Sales tax or VAT obligations",
-    "AccountType": 1,
-    "ParentId": null,
-    "Balance": 0,
+    "SafeId": null,
     "CreatedBy": "System"
   },
   {
@@ -67,6 +51,7 @@
     "AccountType": 2,
     "ParentId": null,
     "Balance": 50000,
+    "SafeId": null,
     "CreatedBy": "System"
   },
   {
@@ -77,16 +62,18 @@
     "AccountType": 3,
     "ParentId": null,
     "Balance": 0,
+    "SafeId": null,
     "CreatedBy": "System"
   },
   {
-    "Id": "44444444-4444-4444-4444-444444444442",
-    "Code": "AC-4100",
-    "Name": "Service Revenue",
-    "Description": "Income from provided services",
-    "AccountType": 3,
+    "Id": "88888888-8888-8888-8888-888888888888",
+    "Code": "AC-500",
+    "Name": "Base Expenses Account",
+    "Description": "Top-level parent account for all expenses",
+    "AccountType": 4,
     "ParentId": null,
     "Balance": 0,
+    "SafeId": null,
     "CreatedBy": "System"
   },
   {
@@ -95,48 +82,9 @@
     "Name": "Salary Expense",
     "Description": "Employee salaries and wages",
     "AccountType": 4,
-    "ParentId": null,
+    "ParentId": "88888888-8888-8888-8888-888888888888",
     "Balance": 0,
-    "CreatedBy": "System"
-  },
-  {
-    "Id": "55555555-5555-5555-5555-555555555552",
-    "Code": "AC-5100",
-    "Name": "Rent Expense",
-    "Description": "Office or facility rent costs",
-    "AccountType": 4,
-    "ParentId": null,
-    "Balance": 0,
-    "CreatedBy": "System"
-  },
-  {
-    "Id": "55555555-5555-5555-5555-555555555553",
-    "Code": "AC-5200",
-    "Name": "Utilities Expense",
-    "Description": "Electricity, water, internet, etc.",
-    "AccountType": 4,
-    "ParentId": null,
-    "Balance": 0,
-    "CreatedBy": "System"
-  },
-  {
-    "Id": "55555555-5555-5555-5555-555555555555",
-    "Code": "AC-5400",
-    "Name": "Discount Allowed",
-    "Description": "Customer discounts and allowances",
-    "AccountType": 4,
-    "ParentId": null,
-    "Balance": 0,
-    "CreatedBy": "System"
-  },
-  {
-    "Id": "55555555-5555-5555-5555-555555555554",
-    "Code": "AC-5300",
-    "Name": "Office Supplies Expense",
-    "Description": "Stationery and consumables",
-    "AccountType": 4,
-    "ParentId": null,
-    "Balance": 0,
+    "SafeId": null,
     "CreatedBy": "System"
   },
   {
@@ -145,8 +93,20 @@
     "Name": "Purchases Account",
     "Description": "Used to record purchase expenses",
     "AccountType": 4,
+    "ParentId": "88888888-8888-8888-8888-888888888888",
+    "Balance": 0,
+    "SafeId": null,
+    "CreatedBy": "System"
+  },
+  {
+    "Id": "77777777-7777-7777-7777-777777777777",
+    "Code": "AC-1020",
+    "Name": "Digital Wallet Account",
+    "Description": "Account used for online wallet transactions",
+    "AccountType": 0,
     "ParentId": null,
     "Balance": 0,
+    "SafeId": "33333333-3333-3333-3333-333333333333",
     "CreatedBy": "System"
   }
 ]

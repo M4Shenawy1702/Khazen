@@ -14,7 +14,7 @@ using System.Text.Json;
 
 namespace Khazen.Infrastructure.Persistence
 {
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -28,6 +28,7 @@ namespace Khazen.Infrastructure.Persistence
         {
             base.OnModelCreating(builder);
             ApplyDecimalPrecision(builder);
+
 
             builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
         }

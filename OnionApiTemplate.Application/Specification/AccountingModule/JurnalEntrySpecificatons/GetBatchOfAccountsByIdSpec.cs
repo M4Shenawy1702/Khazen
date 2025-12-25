@@ -9,6 +9,7 @@ namespace Khazen.Application.Specification.AccountingModule.JurnalEntrySpecifica
         public GetBatchOfAccountsByIdSpec(HashSet<Guid> Ids)
             : base(a => Ids.Contains(a.Id))
         {
+            AddInclude(a => a.Safe!);
         }
     }
 }

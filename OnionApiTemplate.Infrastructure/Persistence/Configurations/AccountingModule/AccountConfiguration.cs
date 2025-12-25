@@ -39,6 +39,12 @@ namespace Khazen.Infrastructure.Persistence.Configurations.AccountingModule
             builder.HasIndex(a => a.Code).IsUnique();
             builder.HasIndex(a => a.Name);
 
+            builder.HasOne(a => a.Safe)
+                 .WithOne(s => s.Account)
+                 .HasForeignKey<Account>(a => a.SafeId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+
         }
     }
 }

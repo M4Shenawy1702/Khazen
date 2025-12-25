@@ -32,6 +32,13 @@ namespace Khazen.Application.UseCases.HRModule.PerformanceReviewUseCases.Command
                 throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
             }
 
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            if (user is null)
+            {
+                _logger.LogError("User {UserId} not found", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
+
             if (request.Dto.ReviewerId == request.Dto.EmployeeId)
             {
                 _logger.LogWarning("Attempt to create self-review for EmployeeId: {EmployeeId}", request.Dto.EmployeeId);
@@ -60,12 +67,6 @@ namespace Khazen.Application.UseCases.HRModule.PerformanceReviewUseCases.Command
                     new GetPerformanceReviewByEmpIdAndDate(request.Dto.EmployeeId),
                     cancellationToken
                 );
-                var user = await _userManager.FindByNameAsync(request.CreatedBy);
-                if (user is null)
-                {
-                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.CreatedBy);
-                    throw new NotFoundException<ApplicationUser>(request.CreatedBy);
-                }
 
                 if (reviewExisting is not null)
                 {
@@ -78,13 +79,12 @@ namespace Khazen.Application.UseCases.HRModule.PerformanceReviewUseCases.Command
 
                 var performanceReview = _mapper.Map<PerformanceReview>(request.Dto);
                 performanceReview.CreatedAt = DateTime.UtcNow;
-                performanceReview.CreatedBy = request.CreatedBy;
+                performanceReview.CreatedBy = user.UserName!;
 
                 await performanceReviewRepository.AddAsync(performanceReview, cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
                 var performanceReviewDto = _mapper.Map<PerformanceReviewDto>(performanceReview);
-                performanceReviewDto.ReviewerName = $"{reviewer.FirstName} {reviewer.LastName}";
                 performanceReviewDto.EmployeeName = $"{employee.FirstName} {employee.LastName}";
 
 

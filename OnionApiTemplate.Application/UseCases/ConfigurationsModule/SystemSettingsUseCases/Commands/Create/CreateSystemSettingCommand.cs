@@ -2,6 +2,5 @@
 
 namespace Khazen.Application.UseCases.ConfigurationsModule.SystemSettingsUseCases.Commands.Create
 {
-    public record CreateSystemSettingCommand(CreateSystemSettingDto Dto)
-        : IRequest<SystemSettingDto>;
+    public record CreateSystemSettingCommand(CreateSystemSettingDto Dto, string CreatedBy) : IRequest<SystemSettingDto>;
 }

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Khazen.Domain.Entities.AccountingModule;
+using System.ComponentModel.DataAnnotations;
 
 namespace Khazen.Domain.Entities
 {
@@ -9,6 +10,8 @@ namespace Khazen.Domain.Entities
         public decimal Balance { get; set; } = 0;
         public string? Description { get; set; }
         public bool IsActive { get; set; }
+
+        public Account Account { get; set; } = null!;
 
         public ICollection<SafeTransaction> SafeTransactions { get; set; } = [];
 

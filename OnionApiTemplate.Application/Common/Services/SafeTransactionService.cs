@@ -99,7 +99,7 @@ namespace Khazen.Application.Common.Services
                     CreatedAt = DateTime.UtcNow,
                     Type = SafeTransactionType.SalesPaymentReversal,
                     JournalEntryId = reversalJournal.Id,
-                    CreatedBy = request.DeletedBy,
+                    CreatedBy = request.CurrentUserId,
                     SourceId = payment.Id,
                     SourceType = TransactionSourceType.SalesInvoicePayment
                 };

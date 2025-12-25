@@ -13,7 +13,8 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
         INumberSequenceService numberSequenceService,
         IGetSystemValues getSystemValues,
         ILogger<DeletePurchaseInvoiceCommandHandler> logger,
-        IJournalEntryService journalEntryService
+        IJournalEntryService journalEntryService,
+        UserManager<ApplicationUser> userManager
     ) : IRequestHandler<DeletePurchaseInvoiceCommand, bool>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
@@ -21,6 +22,7 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
         private readonly IGetSystemValues _getSystemValues = getSystemValues;
         private readonly ILogger<DeletePurchaseInvoiceCommandHandler> _logger = logger;
         private readonly IJournalEntryService _journalEntryService = journalEntryService;
+        private readonly UserManager<ApplicationUser> _userManager = userManager;
 
         public async Task<bool> Handle(DeletePurchaseInvoiceCommand request, CancellationToken cancellationToken)
         {
@@ -29,6 +31,12 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
             _logger.LogDebug("Transaction started.");
 
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            if (user is null)
+            {
+                _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
             try
             {
                 var repo = _unitOfWork.GetRepository<PurchaseInvoice, Guid>();
@@ -46,7 +54,7 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
                     throw new BadRequestException("Cannot delete an invoice that has payments.");
                 }
 
-                var reversalEntry = await _journalEntryService.GenerateReversalPurchaseInvoiceAsync(invoice, cancellationToken);
+                var reversalEntry = await _journalEntryService.GenerateReversalPurchaseInvoiceAsync(invoice, user.UserName!, cancellationToken);
 
                 var journalEntryRepo = _unitOfWork.GetRepository<JournalEntry, Guid>();
                 await journalEntryRepo.AddAsync(reversalEntry, cancellationToken);

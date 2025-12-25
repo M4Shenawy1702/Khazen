@@ -24,9 +24,12 @@ namespace Khazen.Infrastructure.Persistence.Configurations.AccountingModule
                    .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasOne(j => j.Account)
-                   .WithMany(a => a.JournalEntryLines)
-                   .HasForeignKey(j => j.AccountId)
-                   .OnDelete(DeleteBehavior.Restrict);
+                .WithMany(a => a.JournalEntryLines)
+                .HasForeignKey(j => j.AccountId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+
+
         }
     }
 }

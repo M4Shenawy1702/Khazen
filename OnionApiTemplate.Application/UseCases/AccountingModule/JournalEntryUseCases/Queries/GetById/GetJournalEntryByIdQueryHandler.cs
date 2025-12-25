@@ -16,17 +16,27 @@ namespace Khazen.Application.UseCases.AccountingModule.JournalEntryUseCases.Quer
         {
             try
             {
-                _logger.LogDebug("Start GetJournalEntryByIdQueryHandler Id: {Id} ...", request.Id);
+                _logger.LogDebug("Start GetJournalEntryByIdQueryHandler Id: {Id}...", request.Id);
                 var repo = _unitOfWork.GetRepository<JournalEntry, Guid>();
+
+                _logger.LogDebug("Executing GetAsync for Journal Entry Id: {Id} with includes.", request.Id);
                 var entry = await repo.GetAsync(new GetJurnalEntryByIdWithIncludesSpecification(request.Id), cancellationToken, true);
+
                 if (entry == null)
                 {
                     _logger.LogError("Journal entry with Id {Id} was not found", request.Id);
                     throw new NotFoundException<JournalEntry>(request.Id);
                 }
-                _logger.LogInformation("Journal entry with Id {Id} retrieved successfully.", entry.Id);
 
-                return _mapper.Map<JournalEntryDetailsDto>(entry);
+                _logger.LogInformation("Journal entry {Number} (Id: {Id}) retrieved successfully. Total lines: {LineCount}.",
+                    entry.JournalEntryNumber, entry.Id, entry.Lines.Count);
+
+                _logger.LogDebug("Starting mapping of Journal Entry Id {Id} to DTO.", entry.Id);
+                var resultDto = _mapper.Map<JournalEntryDetailsDto>(entry);
+
+                _logger.LogInformation("Successfully mapped Journal Entry Id {Id} to DTO.", entry.Id);
+
+                return resultDto;
             }
             catch (Exception ex)
             {

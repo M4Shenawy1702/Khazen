@@ -17,33 +17,23 @@ namespace Khazen.Application.UseCases.HRModule.DeductionUseCases.Queries.GetById
 
         public async Task<DeductionDetailsDto> Handle(GetDeductionByIdQuery request, CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Starting GetDeductionByIdQueryHandler for DeductionId: {DeductionId}", request.Id);
+            _logger.LogDebug("Fetching deduction details for Id: {DeductionId}", request.Id);
 
-            try
+            var deductionRepo = _unitOfWork.GetRepository<Deduction, Guid>();
+
+            var deduction = await deductionRepo.GetAsync(
+                new GetDeductionByIdSpecification(request.Id),
+                cancellationToken,
+                asNoTracking: true
+            );
+
+            if (deduction is null)
             {
-                var deductionRepo = _unitOfWork.GetRepository<Deduction, int>();
-
-                var deduction = await deductionRepo.GetAsync(
-                    new GetDeductionByIdSpecification(request.Id),
-                    cancellationToken,
-                    true
-                );
-
-                if (deduction is null)
-                {
-                    _logger.LogWarning("Deduction not found. DeductionId: {DeductionId}", request.Id);
-                    throw new NotFoundException<Deduction>(request.Id);
-                }
-
-                _logger.LogInformation("Deduction found successfully. DeductionId: {DeductionId}", request.Id);
-
-                return _mapper.Map<DeductionDetailsDto>(deduction);
+                _logger.LogWarning("Deduction with Id {DeductionId} was not found.", request.Id);
+                throw new NotFoundException<Deduction>(request.Id);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while retrieving DeductionId: {DeductionId}", request.Id);
-                throw new ApplicationException($"An unexpected error occurred while fetching deduction {request.Id}.", ex);
-            }
+
+            return _mapper.Map<DeductionDetailsDto>(deduction);
         }
     }
 }

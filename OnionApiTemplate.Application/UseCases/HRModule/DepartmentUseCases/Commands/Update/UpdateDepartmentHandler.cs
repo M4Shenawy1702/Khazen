@@ -20,64 +20,64 @@ namespace Khazen.Application.UseCases.HRModule.DepartmentUseCases.Commands.Updat
 
         public async Task<DepartmentDetailsDto> Handle(UpdateDepartmentCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Starting UpdateDepartmentHandler for DepartmentId: {DepartmentId}, ModifiedBy: {ModifiedBy}",
-                request.Id, request.ModifiedBy);
+            _logger.LogInformation("Attempting to update department ID: {Id}", request.Id);
 
-            try
+            var validationResult = await _validator.ValidateAsync(request, cancellationToken);
+            if (!validationResult.IsValid)
             {
-                var validationResult = await _validator.ValidateAsync(request, cancellationToken);
-                if (!validationResult.IsValid)
-                {
-                    _logger.LogWarning("Validation failed for UpdateDepartmentCommand: {Errors}",
-                        string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
-                    throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
-                }
+                throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
+            }
 
-                var repository = _unitOfWork.GetRepository<Department, Guid>();
-                var existingDepartment = await repository.GetByIdAsync(request.Id, cancellationToken);
-                if (existingDepartment is null)
-                {
-                    _logger.LogWarning("Department not found. DepartmentId: {DepartmentId}", request.Id);
-                    throw new NotFoundException<Department>(request.Id);
-                }
+            var repository = _unitOfWork.GetRepository<Department, Guid>();
+            var existingDepartment = await repository.GetByIdAsync(request.Id, cancellationToken);
 
-                if (existingDepartment.IsDeleted)
-                {
-                    _logger.LogWarning("Cannot update deleted department. DepartmentId: {DepartmentId}", request.Id);
-                    throw new BadRequestException($"Department with ID '{request.Id}' is deleted and cannot be updated.");
-                }
+            if (existingDepartment is null)
+            {
+                _logger.LogWarning("Update failed: Department {Id} not found", request.Id);
+                throw new NotFoundException<Department>(request.Id);
+            }
 
-                var nameExists = await repository.AnyAsync(d => d.Name == request.Dto.Name && d.Id != request.Id, cancellationToken);
-                if (nameExists)
+            if (existingDepartment.IsDeleted)
+            {
+                _logger.LogWarning("Update failed: Department {Id} is soft-deleted", request.Id);
+                throw new BadRequestException("Cannot update a deleted department.");
+            }
+
+            if (existingDepartment.Name != request.Dto.Name)
+            {
+                var conflictingDept = await repository.FirstOrDefaultAsync(d =>
+                    d.Name == request.Dto.Name &&
+                    d.Id != request.Id, cancellationToken);
+
+                if (conflictingDept is not null)
                 {
-                    _logger.LogWarning("Department name conflict. Name: {DepartmentName}", request.Dto.Name);
+                    if (conflictingDept.IsDeleted)
+                    {
+                        _logger.LogWarning("Conflict: Department '{Name}' exists but is deleted.", request.Dto.Name);
+                        throw new BadRequestException($"A department named '{request.Dto.Name}' already exists in the archives (deleted). Please toggle/restore it instead of renaming this one.");
+                    }
+
+                    _logger.LogWarning("Update conflict: Name '{Name}' is currently in use by another active department.", request.Dto.Name);
                     throw new AlreadyExistsException<Department>(request.Dto.Name);
                 }
-
-                var user = await _userManager.FindByNameAsync(request.ModifiedBy);
-                if (user is null)
-                {
-                    _logger.LogWarning("User not found. UserId: {ModifiedBy}", request.ModifiedBy);
-                    throw new NotFoundException<ApplicationUser>(request.ModifiedBy);
-                }
-
-                _mapper.Map(request.Dto, existingDepartment);
-                existingDepartment.ModifiedAt = DateTime.UtcNow;
-                existingDepartment.ModifiedBy = request.ModifiedBy;
-
-                repository.Update(existingDepartment);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                _logger.LogInformation("Department updated successfully. DepartmentId: {DepartmentId}, ModifiedBy: {ModifiedBy}",
-                    existingDepartment.Id, request.ModifiedBy);
-
-                return _mapper.Map<DepartmentDetailsDto>(existingDepartment);
             }
-            catch (Exception ex)
+
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            if (user is null)
             {
-                _logger.LogError(ex, "Error occurred while updating department. DepartmentId: {DepartmentId}", request.Id);
-                throw new ApplicationException("An unexpected error occurred while updating the department.", ex);
+                _logger.LogWarning("Update failed: User {UserId} not found", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
+
+            _mapper.Map(request.Dto, existingDepartment);
+            existingDepartment.ModifiedAt = DateTime.UtcNow;
+            existingDepartment.ModifiedBy = request.CurrentUserId;
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Department {Id} updated successfully by {UserId}", request.Id, request.CurrentUserId);
+
+            return _mapper.Map<DepartmentDetailsDto>(existingDepartment);
         }
     }
 }

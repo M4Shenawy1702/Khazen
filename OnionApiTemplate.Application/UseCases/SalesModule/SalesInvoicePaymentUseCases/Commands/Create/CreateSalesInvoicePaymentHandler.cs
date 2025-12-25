@@ -19,7 +19,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Co
     IJournalEntryService journalEntryService,
     ISalesPaymentDomainService paymentDomainService,
     IValidator<CreateSalesInvoicePaymentCommand> validator,
-    ILogger<CreateSalesInvoicePaymentHandler> logger
+    ILogger<CreateSalesInvoicePaymentHandler> logger, UserManager<ApplicationUser> userManager
     ) : IRequestHandler<CreateSalesInvoicePaymentCommand, SalesInvoicePaymentDto>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
@@ -29,6 +29,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Co
         private readonly ISalesPaymentDomainService _paymentDomainService = paymentDomainService;
         private readonly IValidator<CreateSalesInvoicePaymentCommand> _validator = validator;
         private readonly ILogger<CreateSalesInvoicePaymentHandler> _logger = logger;
+        private readonly UserManager<ApplicationUser> _userManager = userManager;
 
         public async Task<SalesInvoicePaymentDto> Handle(CreateSalesInvoicePaymentCommand request, CancellationToken cancellationToken)
         {
@@ -39,6 +40,13 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Co
             {
                 _logger.LogWarning("Validation failed for sales invoice payment request: {Errors}", validationResult.Errors.Select(e => e.ErrorMessage));
                 throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
+            }
+
+            var user = await _userManager.FindByNameAsync(request.CreatedBy);
+            if (user is null)
+            {
+                _logger.LogInformation("User not found. Username: {CreatedBy}", request.CreatedBy);
+                throw new NotFoundException<ApplicationUser>(request.CreatedBy);
             }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -64,7 +72,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Co
                 _logger.LogInformation("Created payment object with Id: {PaymentId}", payment.Id);
 
                 var journalEntry = await _journalEntryService.CreateSalesInvoicePaymentJournalAsync(
-                    invoice, request, systemSettings, cancellationToken);
+                    invoice, user.UserName!, request, systemSettings, cancellationToken);
 
                 _logger.LogInformation("Created journal entry with Id: {JournalEntryId}", journalEntry.Id);
 

@@ -9,9 +9,6 @@ namespace Khazen.Application.Validations.HRModule.BonusValidatoions
             RuleFor(x => x.Dto.EmployeeId)
                 .NotEmpty().WithMessage("Employee ID is required.");
 
-            RuleFor(x => x.CreatedBy)
-                .NotEmpty().WithMessage("CreatedBy is required.");
-
             RuleFor(x => x.Dto.BonusAmount)
                 .GreaterThan(0).WithMessage("Bonus amount must be greater than zero.")
                 .LessThanOrEqualTo(1000000).WithMessage("Bonus amount is too large.");

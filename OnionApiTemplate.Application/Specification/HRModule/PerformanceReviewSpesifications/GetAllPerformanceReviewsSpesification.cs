@@ -20,7 +20,6 @@ namespace Khazen.Application.BaseSpecifications.HRModule.PerformanceReviewSpesif
             ApplyPagination(queryParameters.PageSize, queryParameters.PageIndex);
 
             AddInclude(p => p.Employee!);
-            AddInclude(p => p.Reviewer!);
 
             AddOrderBy(p => p.ReviewDate);
         }

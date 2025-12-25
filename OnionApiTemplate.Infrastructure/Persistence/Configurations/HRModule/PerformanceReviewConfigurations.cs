@@ -18,11 +18,6 @@ namespace Khazen.Infrastructure.Persistence.Configurations.HRModule
                    .HasForeignKey(e => e.EmployeeId)
                    .IsRequired(false);
 
-            builder.HasOne(p => p.Reviewer)
-                   .WithMany()
-                   .HasForeignKey(p => p.ReviewerId)
-                   .OnDelete(DeleteBehavior.Restrict);
-
             builder.Property(p => p.ReviewDate)
                    .HasConversion(
                        v => v.ToDateTime(TimeOnly.MinValue),

@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.HRModule.AttendanceUsecases.Commands.CheckOut
 {
-    public record CheckOutCommand(Guid AttendanceId) : IRequest<AttendanceDto>;
+    public record CheckOutCommand(CheckOutDto Dto, string CurrentUserId) : IRequest<AttendanceDto>;
 }

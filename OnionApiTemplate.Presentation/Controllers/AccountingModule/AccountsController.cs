@@ -7,14 +7,13 @@ using Khazen.Application.UseCases.AccountingModule.AccountUseCases.Queries.GetAl
 using Khazen.Application.UseCases.AccountingModule.AccountUseCases.Queries.GetById;
 using Khazen.Presentation.Attributes;
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Khazen.Presentation.Controllers.AccountingModule
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    //[Authorize]
     public class AccountsController : ControllerBase
     {
         private readonly ISender _sender;
@@ -27,9 +26,9 @@ namespace Khazen.Presentation.Controllers.AccountingModule
         public async Task<ActionResult<AccountDetailsDto>> Create([FromBody] CreateAccountDto dto)
         {
             var user = User.Identity?.Name;
-            if (user == null)
-                return BadRequest("User not found");
-            var result = await _sender.Send(new CreateAccountCommand(dto, user));
+            //if (user == null)
+            //    return BadRequest("User not found");
+            var result = await _sender.Send(new CreateAccountCommand(dto, user ?? "System"));
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 

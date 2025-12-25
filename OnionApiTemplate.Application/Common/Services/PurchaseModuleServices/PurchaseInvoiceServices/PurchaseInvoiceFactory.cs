@@ -37,7 +37,7 @@ namespace Khazen.Application.Common.Services.PurchaseModuleServices.PurchaseInvo
             if (receipt.Items.Count != command.Dto.Items.Count)
                 throw new BadRequestException("Invoice items count must match receipt items count.");
 
-            var invoice = new PurchaseInvoice(receipt.Id, receipt.PurchaseOrder!.SupplierId, command.Dto.InvoiceNumber, command.CreatedBy, command.Dto.InvoiceDate, command.Dto.Notes);
+            var invoice = new PurchaseInvoice(receipt.Id, receipt.PurchaseOrder!.SupplierId, command.Dto.InvoiceNumber, command.CurrentUserId, command.Dto.InvoiceDate, command.Dto.Notes);
 
             var dtoMap = command.Dto.Items.ToDictionary(i => i.ProductId, i => i);
 

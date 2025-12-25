@@ -16,18 +16,18 @@ namespace Khazen.Application.UseCases.HRModule.EmployeeUsecases.Queries.GetById
 
         public async Task<EmployeeDetailsDto> Handle(GetEmployeeByIdQuery request, CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Starting GetEmployeeByIdHandler for EmployeeId: {EmployeeId}", request.id);
+            _logger.LogDebug("Starting GetEmployeeByIdHandler for EmployeeId: {EmployeeId}", request.Id);
 
             try
             {
                 var repo = _unitOfWork.GetRepository<Employee, Guid>();
 
-                var employee = await repo.GetAsync(new GetEmployeeByIdSpecification(request.id), cancellationToken, true);
+                var employee = await repo.GetAsync(new GetEmployeeByIdSpecification(request.Id), cancellationToken, true);
 
                 if (employee is null)
                 {
-                    _logger.LogWarning("Employee not found. EmployeeId: {EmployeeId}", request.id);
-                    throw new NotFoundException<Employee>(request.id);
+                    _logger.LogWarning("Employee not found. EmployeeId: {EmployeeId}", request.Id);
+                    throw new NotFoundException<Employee>(request.Id);
                 }
 
                 _logger.LogInformation("Employee retrieved successfully. EmployeeId: {EmployeeId}", employee.Id);
@@ -40,7 +40,7 @@ namespace Khazen.Application.UseCases.HRModule.EmployeeUsecases.Queries.GetById
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error occurred while retrieving EmployeeId: {EmployeeId}", request.id);
+                _logger.LogError(ex, "Unexpected error occurred while retrieving EmployeeId: {EmployeeId}", request.Id);
                 throw;
             }
         }

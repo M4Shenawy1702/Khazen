@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.HRModule.BonusUseCases.Commands.Add
 {
-    public record AddBonusCommand(AddBonusDto Dto, string CreatedBy) : IRequest<BonusDto>;
+    public record AddBonusCommand(AddBonusDto Dto, string CurrentUserId) : IRequest<BonusDto>;
 }

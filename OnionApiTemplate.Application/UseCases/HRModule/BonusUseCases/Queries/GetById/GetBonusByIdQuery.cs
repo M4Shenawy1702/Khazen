@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.HRModule.BonusUseCases.Queries.GetById
 {
-    public record GetBonusByIdQuery(int Id) : IRequest<BonusDetailsDto>;
+    public record GetBonusByIdQuery(Guid Id) : IRequest<BonusDetailsDto>;
 }

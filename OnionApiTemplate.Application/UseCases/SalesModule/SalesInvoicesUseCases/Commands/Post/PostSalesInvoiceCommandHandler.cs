@@ -67,7 +67,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
                 }
 
                 _logger.LogInformation("Generating journal entry for invoice {InvoiceId}", salesInvoice.Id);
-                await _journalEntryService.CreateSalesInvoiceJournalAsync(salesInvoice, cancellationToken);
+                await _journalEntryService.CreateSalesInvoiceJournalAsync(salesInvoice, user.UserName!, cancellationToken);
 
                 _logger.LogDebug("Marking invoice {InvoiceId} as posted by {User}", salesInvoice.Id, request.PostedBy);
                 salesInvoice.MarkAsPosted(request.PostedBy);

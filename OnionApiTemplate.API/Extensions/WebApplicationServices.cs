@@ -7,7 +7,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 
 namespace Khazen.API.Extensions
 {
@@ -32,6 +34,41 @@ namespace Khazen.API.Extensions
                           .AllowCredentials();
                 });
             });
+            services.AddRateLimiter(rateLimiterOptions =>
+            {
+                rateLimiterOptions.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+                rateLimiterOptions.AddPolicy("GlobalControllerPolicy", context =>
+                {
+                    if (context.User.Identity?.IsAuthenticated == true)
+                    {
+                        return RateLimitPartition.GetSlidingWindowLimiter(
+                            context.User.FindFirstValue(ClaimTypes.NameIdentifier)!,
+                            key => new SlidingWindowRateLimiterOptions
+                            {
+                                Window = TimeSpan.FromSeconds(10),
+                                SegmentsPerWindow = 5,
+                                PermitLimit = 10,
+                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                                QueueLimit = 0
+                            });
+                    }
+                    else
+                    {
+                        return RateLimitPartition.GetSlidingWindowLimiter(
+                            context.Connection.RemoteIpAddress?.ToString()!,
+                            key => new SlidingWindowRateLimiterOptions
+                            {
+                                Window = TimeSpan.FromSeconds(60),
+                                SegmentsPerWindow = 6,
+                                PermitLimit = 15,
+                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                                QueueLimit = 0
+                            });
+                    }
+                });
+            });
+
             services.AddControllers()
                 .AddJsonOptions(options =>
                 {

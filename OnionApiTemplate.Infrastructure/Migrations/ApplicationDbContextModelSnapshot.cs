@@ -71,6 +71,9 @@ namespace Khazen.Infrastructure.Migrations
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("SafeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("ToggledAt")
                         .HasColumnType("datetime2");
 
@@ -83,6 +86,10 @@ namespace Khazen.Infrastructure.Migrations
                         .IsUnique();
 
                     b.HasIndex("Name");
+
+                    b.HasIndex("SafeId")
+                        .IsUnique()
+                        .HasFilter("[SafeId] IS NOT NULL");
 
                     b.HasIndex("ParentId", "Name")
                         .IsUnique()
@@ -147,6 +154,15 @@ namespace Khazen.Infrastructure.Migrations
 
                     b.Property<DateTime?>("ReversedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("ReversedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("TransactionType")
                         .IsRequired()
@@ -1071,7 +1087,7 @@ namespace Khazen.Infrastructure.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2025, 12, 4, 12, 35, 46, 519, DateTimeKind.Utc).AddTicks(2414),
+                            CreatedAt = new DateTime(2025, 12, 11, 20, 23, 17, 200, DateTimeKind.Utc).AddTicks(7593),
                             CreatedBy = "",
                             CurrentNumber = 0,
                             IsDeleted = false,
@@ -1671,17 +1687,23 @@ namespace Khazen.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -1694,7 +1716,8 @@ namespace Khazen.Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -1702,12 +1725,16 @@ namespace Khazen.Infrastructure.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Saves");
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Safes", (string)null);
                 });
 
             modelBuilder.Entity("Khazen.Domain.Entities.SafeTransaction", b =>
@@ -1717,18 +1744,21 @@ namespace Khazen.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("Date")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -1743,7 +1773,8 @@ namespace Khazen.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Note")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<Guid>("SafeId")
                         .HasColumnType("uniqueidentifier");
@@ -1754,8 +1785,10 @@ namespace Khazen.Infrastructure.Migrations
                     b.Property<int>("SourceType")
                         .HasColumnType("int");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
@@ -1763,7 +1796,7 @@ namespace Khazen.Infrastructure.Migrations
 
                     b.HasIndex("SafeId");
 
-                    b.ToTable("SafeTransactions");
+                    b.ToTable("SafeTransactions", (string)null);
                 });
 
             modelBuilder.Entity("Khazen.Domain.Entities.SalesModule.Customer", b =>
@@ -1809,7 +1842,8 @@ namespace Khazen.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("Customers", (string)null);
                 });
@@ -2203,6 +2237,60 @@ namespace Khazen.Infrastructure.Migrations
                     b.ToTable("SalesOrderItems", (string)null);
                 });
 
+            modelBuilder.Entity("Khazen.Domain.Entities.UsersModule.ApplicationRole", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RevokedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("RoleNameIndex")
+                        .HasFilter("[NormalizedName] IS NOT NULL");
+
+                    b.ToTable("AspNetRoles", (string)null);
+                });
+
             modelBuilder.Entity("Khazen.Domain.Entities.UsersModule.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
@@ -2219,7 +2307,8 @@ namespace Khazen.Infrastructure.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("DateOfBirth")
+                    b.Property<DateTime?>("DateOfBirth")
+                        .IsRequired()
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
@@ -2278,6 +2367,15 @@ namespace Khazen.Infrastructure.Migrations
                     b.Property<DateTime?>("PhoneOtpExpiry")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("PhoneOtpFailedAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
@@ -2288,6 +2386,9 @@ namespace Khazen.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("UserType")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -2425,23 +2526,15 @@ namespace Khazen.Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NormalizedName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("Roles", (string)null);
                 });
@@ -2559,7 +2652,14 @@ namespace Khazen.Infrastructure.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Khazen.Domain.Entities.Safe", "Safe")
+                        .WithOne("Account")
+                        .HasForeignKey("Khazen.Domain.Entities.AccountingModule.Account", "SafeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Parent");
+
+                    b.Navigation("Safe");
                 });
 
             modelBuilder.Entity("Khazen.Domain.Entities.AccountingModule.JournalEntry", b =>
@@ -2577,7 +2677,7 @@ namespace Khazen.Infrastructure.Migrations
                     b.HasOne("Khazen.Domain.Entities.AccountingModule.Account", "Account")
                         .WithMany("JournalEntryLines")
                         .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Khazen.Domain.Entities.AccountingModule.JournalEntry", "JournalEntry")
@@ -2911,8 +3011,7 @@ namespace Khazen.Infrastructure.Migrations
                     b.HasOne("Khazen.Domain.Entities.Safe", "Safe")
                         .WithMany("SafeTransactions")
                         .HasForeignKey("SafeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("JournalEntry");
 
@@ -2922,8 +3021,8 @@ namespace Khazen.Infrastructure.Migrations
             modelBuilder.Entity("Khazen.Domain.Entities.SalesModule.Customer", b =>
                 {
                     b.HasOne("Khazen.Domain.Entities.UsersModule.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
+                        .WithOne("Customer")
+                        .HasForeignKey("Khazen.Domain.Entities.SalesModule.Customer", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -3052,7 +3151,7 @@ namespace Khazen.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("Khazen.Domain.Entities.UsersModule.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3079,7 +3178,7 @@ namespace Khazen.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("Khazen.Domain.Entities.UsersModule.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3191,6 +3290,9 @@ namespace Khazen.Infrastructure.Migrations
 
             modelBuilder.Entity("Khazen.Domain.Entities.Safe", b =>
                 {
+                    b.Navigation("Account")
+                        .IsRequired();
+
                     b.Navigation("SafeTransactions");
                 });
 
@@ -3217,6 +3319,8 @@ namespace Khazen.Infrastructure.Migrations
 
             modelBuilder.Entity("Khazen.Domain.Entities.UsersModule.ApplicationUser", b =>
                 {
+                    b.Navigation("Customer");
+
                     b.Navigation("Employee");
 
                     b.Navigation("RefreshTokens");

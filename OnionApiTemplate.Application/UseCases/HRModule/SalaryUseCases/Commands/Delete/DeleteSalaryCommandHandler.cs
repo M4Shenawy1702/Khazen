@@ -1,4 +1,6 @@
-﻿using Khazen.Domain.Exceptions;
+﻿using Khazen.Application.Specification.AccountingModule.JurnalEntrySpecificatons;
+using Khazen.Domain.Entities.AccountingModule;
+using Khazen.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace Khazen.Application.UseCases.HRModule.SalaryUseCases.Commands.Delete
@@ -13,29 +15,57 @@ namespace Khazen.Application.UseCases.HRModule.SalaryUseCases.Commands.Delete
 
         public async Task<bool> Handle(DeleteSalaryCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting deletion process for SalaryId: {SalaryId} by User: {ModifiedBy}",
-                request.SalaryId, request.ModifiedBy);
+            _logger.LogInformation("Initiating Salary Reversal: ID {SalaryId} by User {User}",
+                request.SalaryId, request.CurrentUserId);
+
+            var salaryRepo = _unitOfWork.GetRepository<Salary, Guid>();
+            var journalRepo = _unitOfWork.GetRepository<JournalEntry, Guid>();
+
+            await _unitOfWork.BeginTransactionAsync(cancellationToken);
+
             try
             {
-                var salaryRepo = _unitOfWork.GetRepository<Salary, Guid>();
                 var salary = await salaryRepo.GetByIdAsync(request.SalaryId, cancellationToken);
-
                 if (salary == null)
                 {
-                    _logger.LogWarning("Salary record not found for SalaryId: {SalaryId}", request.SalaryId);
+                    _logger.LogWarning("Salary {Id} not found.", request.SalaryId);
                     throw new NotFoundException<Salary>(request.SalaryId);
                 }
 
-                _logger.LogDebug("Toggling salary status for SalaryId: {SalaryId}", request.SalaryId);
+                if (salary.IsDeleted)
+                {
+                    _logger.LogWarning("Salary {Id} is already deleted.", request.SalaryId);
+                    throw new BadRequestException($"Salary {request.SalaryId} is already deleted.");
+                }
 
-                salary.Toggle(request.ModifiedBy);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Salary deleted (toggled) successfully for SalaryId: {SalaryId}", request.SalaryId);
+                _logger.LogDebug("Invalidating salary record {Id}", request.SalaryId);
+                salary.MarkAsDeleted(request.CurrentUserId);
+                salaryRepo.Update(salary);
+
+
+                var relatedJournal = await journalRepo.GetAsync(new GetJournalEntryByReferenceSpec(salary.Id), cancellationToken);
+
+                if (relatedJournal != null)
+                {
+                    _logger.LogInformation("Reversing related Journal Entry: {JournalId}", relatedJournal.Id);
+
+                    var reversalEntry = relatedJournal.CreateReversal(request.CurrentUserId, $"Reversal of Salary {salary.SalaryDate:MM/yyyy}");
+                    await journalRepo.AddAsync(reversalEntry, cancellationToken);
+                }
+                else
+                {
+                    _logger.LogWarning("No related journal entry found for Salary {Id}. HR deleted without accounting reversal.", salary.Id);
+                }
+
+                await _unitOfWork.CommitTransactionAsync(cancellationToken);
+                _logger.LogInformation("Salary {Id} and its accounting impact successfully reversed.", request.SalaryId);
+
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while deleting SalaryId: {SalaryId}", request.SalaryId);
+                await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+                _logger.LogError(ex, "Failed to delete Salary {Id}. Transaction rolled back.", request.SalaryId);
                 throw;
             }
         }

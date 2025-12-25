@@ -2,6 +2,5 @@
 
 namespace Khazen.Application.UseCases.HRModule.AttendanceUsecases.Commands.Update
 {
-    public record UpdateAttendanceCommand(Guid Id, UpdateAttendanceDto Dto)
-        : IRequest<AttendanceDto>;
+    public record UpdateAttendanceCommand(Guid Id, UpdateAttendanceDto Dto, string CurrentUserId) : IRequest<AttendanceDto>;
 }

@@ -19,7 +19,8 @@ namespace Khazen.Application.UseCases.AccountingModule.JournalEntryUseCases.Quer
         {
             try
             {
-                _logger.LogDebug("Starting GetPaginatedJournalEntriesQueryHandler...");
+                _logger.LogDebug("Starting GetPaginatedJournalEntriesQueryHandler | PageIndex: {PageIndex}, PageSize: {PageSize}",
+                    request.QueryParameters.PageIndex, request.QueryParameters.PageSize);
 
                 var validationResult = await _validator.ValidateAsync(request, cancellationToken);
                 if (!validationResult.IsValid)
@@ -27,20 +28,29 @@ namespace Khazen.Application.UseCases.AccountingModule.JournalEntryUseCases.Quer
                     _logger.LogError("Validation failed: {Errors}", string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
                     throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
                 }
+
                 var repo = _unitOfWork.GetRepository<JournalEntry, Guid>();
+
+                _logger.LogDebug("Executing GetAllAsync with specification...");
 
                 var entries = await repo.GetAllAsync(new GetAllJournalEntriesSpecification(request.QueryParameters), cancellationToken, true);
                 var entriesList = entries.ToList();
-                var data = _mapper.Map<IReadOnlyList<JournalEntryDto>>(entriesList);
 
                 var count = await repo.GetCountAsync(new GetAllJournalEntriesCountSpecification(request.QueryParameters), cancellationToken, true);
 
+                _logger.LogDebug("Total count query returned {TotalCount}.", count);
+
+                _logger.LogDebug("Starting mapping of {Count} entities to DTOs...", entriesList.Count);
+                var data = _mapper.Map<IReadOnlyList<JournalEntryDto>>(entriesList);
+
+
                 _logger.LogInformation(
-                     "Fetched {Count} journal entries | PageIndex: {PageIndex}, PageSize: {PageSize}",
-                     entriesList.Count,
-                     request.QueryParameters.PageIndex,
-                     request.QueryParameters.PageSize
-                 );
+                    "Successfully fetched and mapped {MappedCount} journal entries | PageIndex: {PageIndex}, PageSize: {PageSize}, TotalCount: {TotalCount}",
+                    data.Count,
+                    request.QueryParameters.PageIndex,
+                    request.QueryParameters.PageSize,
+                    count
+                );
 
                 return new PaginatedResult<JournalEntryDto>(
                     request.QueryParameters.PageIndex,
@@ -54,13 +64,12 @@ namespace Khazen.Application.UseCases.AccountingModule.JournalEntryUseCases.Quer
             {
 
                 _logger.LogError(ex,
-                 "Error fetching journal entries | PageIndex: {PageIndex}, PageSize: {PageSize}, TransactionType: {TransactionType}",
-                 request.QueryParameters.PageIndex,
-                 request.QueryParameters.PageSize,
-                 request.QueryParameters.TransactionType);
+                   "Error fetching journal entries |  PageIndex: {PageIndex}, PageSize: {PageSize}, TransactionType: {TransactionType}",
+                   request.QueryParameters.PageIndex,
+                   request.QueryParameters.PageSize,
+                   request.QueryParameters.TransactionType);
 
                 throw;
-
             }
         }
     }

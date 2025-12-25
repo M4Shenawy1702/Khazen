@@ -34,6 +34,9 @@ namespace Khazen.Domain.Entities.AccountingModule
         public string Description { get; set; } = string.Empty;
         public AccountType AccountType { get; set; } = AccountType.Asset;
 
+        public Guid? SafeId { get; set; }
+        public Safe? Safe { get; set; }
+
         public Guid? ParentId { get; set; }
         public Account? Parent { get; set; }
 
@@ -43,6 +46,8 @@ namespace Khazen.Domain.Entities.AccountingModule
         public decimal Balance { get; set; } //todo : Calculate Balance from JournalEntryLines
         public ICollection<Account> Children { get; set; } = [];
         public ICollection<JournalEntryLine> JournalEntryLines { get; set; } = [];
+
+        //public void UpdateBalance() => Balance = JournalEntryLines.Sum(l => l.Debit) - JournalEntryLines.Sum(l => l.Credit);
 
         public void ApplyDebit(decimal amount) => Balance += amount;
         public void ApplyCredit(decimal amount)

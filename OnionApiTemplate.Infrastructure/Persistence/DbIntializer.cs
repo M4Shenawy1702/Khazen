@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Identity;
 using System.Reflection;
 using System.Text.Json;
 
-public class DbInitializer(ApplicationDbContext _context, RoleManager<IdentityRole> _roleManager, UserManager<ApplicationUser> _userManager)
+public class DbInitializer(ApplicationDbContext _context, RoleManager<ApplicationRole> _roleManager, UserManager<ApplicationUser> _userManager)
     : IDbInitializer
 {
     public async Task InitializeDatabaseAsync()
@@ -78,7 +78,7 @@ public class DbInitializer(ApplicationDbContext _context, RoleManager<IdentityRo
             {
                 if (!await _roleManager.RoleExistsAsync(roleName!))
                 {
-                    await _roleManager.CreateAsync(new IdentityRole(roleName!));
+                    await _roleManager.CreateAsync(new ApplicationRole { Name = roleName!, CreatedBy = "System" });
                 }
             }
 

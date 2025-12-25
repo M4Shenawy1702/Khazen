@@ -33,6 +33,7 @@ namespace Khazen.Domain.Entities.HRModule
 
             var salary = new Salary
             {
+                Id = Guid.NewGuid(),
                 EmployeeId = employeeId,
                 SalaryDate = salaryDate,
                 CreatedBy = createdBy,
@@ -77,9 +78,9 @@ namespace Khazen.Domain.Entities.HRModule
                 throw new DomainException("Salary components cannot be negative.");
         }
 
-        public void Toggle(string modifiedBy)
+        public void MarkAsDeleted(string modifiedBy)
         {
-            IsDeleted = !IsDeleted;
+            IsDeleted = true;
             ModifiedAt = DateTime.UtcNow;
             ModifiedBy = modifiedBy;
         }

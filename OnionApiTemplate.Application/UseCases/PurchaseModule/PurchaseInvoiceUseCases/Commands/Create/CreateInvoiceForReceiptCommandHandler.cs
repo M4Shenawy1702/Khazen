@@ -15,7 +15,8 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
     IInvoiceFactoryService invoiceFactory,
     IPurchaseInvoiceStockCostService stockService,
     IJournalEntryService journalService,
-    ILogger<CreateInvoiceForReceiptCommandHandler> logger
+    ILogger<CreateInvoiceForReceiptCommandHandler> logger,
+    UserManager<ApplicationUser> userManager
 ) : IRequestHandler<CreateInvoiceForReceiptCommand, PurchaseInvoiceDto>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
@@ -25,6 +26,7 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
         private readonly IPurchaseInvoiceStockCostService _stockService = stockService;
         private readonly IJournalEntryService _journalService = journalService;
         private readonly ILogger<CreateInvoiceForReceiptCommandHandler> _logger = logger;
+        private readonly UserManager<ApplicationUser> _userManager = userManager;
 
         public async Task<PurchaseInvoiceDto> Handle(CreateInvoiceForReceiptCommand request, CancellationToken cancellationToken)
         {
@@ -35,6 +37,13 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
             {
                 _logger.LogWarning("Validation failed: {@Errors}", validationResult.Errors);
                 throw new BadRequestException(validationResult.Errors.Select(e => e.ErrorMessage).ToList());
+            }
+
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            if (user is null)
+            {
+                _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -60,7 +69,7 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
 
                 await _stockService.UpdateStockAndCostAsync(invoice, receipt.WarehouseId, cancellationToken);
 
-                var journalEntry = await _journalService.GeneratePurchaseJournalEntryAsync(invoice, cancellationToken);
+                var journalEntry = await _journalService.GeneratePurchaseJournalEntryAsync(invoice, user.UserName!, cancellationToken);
                 invoice.MarkAsPosted(journalEntry.Id);
 
                 var invoiceRepo = _unitOfWork.GetRepository<PurchaseInvoice, Guid>();
