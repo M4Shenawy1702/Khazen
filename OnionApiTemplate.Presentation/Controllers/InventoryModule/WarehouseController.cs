@@ -4,52 +4,59 @@ using Khazen.Application.UseCases.InventoryModule.WarehouseUseCases.Commands.Del
 using Khazen.Application.UseCases.InventoryModule.WarehouseUseCases.Commands.Update;
 using Khazen.Application.UseCases.InventoryModule.WarehouseUseCases.Queries.GetAll;
 using Khazen.Application.UseCases.InventoryModule.WarehouseUseCases.Queries.GetById;
+using Khazen.Presentation.Attributes;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Khazen.Presentation.Controllers.InventoryModule
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class WarehouseController(IMediator mediator) : ControllerBase
+    public class WarehouseController(ISender sender) : ControllerBase
     {
-        private readonly IMediator _mediator = mediator;
+        private readonly ISender _sender = sender;
+
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                        ?? throw new UnauthorizedAccessException("User identity not available.");
 
         [HttpPost]
-        public async Task<ActionResult<WarehouseDto>> Create([FromBody] CreateWarehouseCommand command)
+        [CacheInvalidate("/api/Warehouse")]
+        public async Task<ActionResult<WarehouseDto>> Create([FromBody] CreateWarehouseDto dto)
         {
-            var result = await _mediator.Send(command);
+            var result = await _sender.Send(new CreateWarehouseCommand(dto, CurrentUserId));
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
+
+        [RedisCache(600)]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<WarehouseDto>>> GetAll()
         {
-            var result = await _mediator.Send(new GetAllWarehousesQuery());
+            var result = await _sender.Send(new GetAllWarehousesQuery());
             return Ok(result);
         }
 
+        [RedisCache(600)]
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<WarehouseDto>> GetById(Guid id)
         {
-            var result = await _mediator.Send(new GetWarehouseByIdQuery(id));
+            var result = await _sender.Send(new GetWarehouseByIdQuery(id));
             return Ok(result);
         }
 
         [HttpPut("{id:guid}")]
-        public async Task<ActionResult<WarehouseDto>> Update(Guid id, [FromBody] UpdateWarehouseCommand command)
+        [CacheInvalidate("/api/Warehouse")]
+        public async Task<ActionResult<WarehouseDto>> Update(Guid id, [FromBody] UpdateWarehouseDto dto)
         {
-            if (id != command.Id) return BadRequest("Id mismatch");
-            var result = await _mediator.Send(command);
+            var result = await _sender.Send(new UpdateWarehouseCommand(id, dto, CurrentUserId));
             return Ok(result);
         }
 
-        [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete(Guid id)
+        [HttpPatch("Toggle/{id:guid}")]
+        [CacheInvalidate("/api/Warehouse")]
+        public async Task<IActionResult> Toggle(Guid id)
         {
-            var user = User.Identity?.Name;
-            if (user == null)
-                return BadRequest("User not found");
-            await _mediator.Send(new ToggleWarehouseCommand(id, user));
+            await _sender.Send(new ToggleWarehouseCommand(id, CurrentUserId));
             return NoContent();
         }
     }

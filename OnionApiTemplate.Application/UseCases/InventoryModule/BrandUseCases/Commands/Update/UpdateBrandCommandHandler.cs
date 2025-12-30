@@ -10,13 +10,15 @@ internal class UpdateBrandCommandHandler(
     IUnitOfWork unitOfWork,
     IMapper mapper,
     ILogger<UpdateBrandCommandHandler> logger,
-    IValidator<UpdateBrandCommand> validator)
+    IValidator<UpdateBrandCommand> validator,
+    UserManager<ApplicationUser> userManager)
     : IRequestHandler<UpdateBrandCommand, BrandDetailsDto>
 {
     private readonly IUnitOfWork _unitOfWork = unitOfWork;
     private readonly IMapper _mapper = mapper;
     private readonly ILogger<UpdateBrandCommandHandler> _logger = logger;
     private readonly IValidator<UpdateBrandCommand> _validator = validator;
+    private readonly UserManager<ApplicationUser> _userManager = userManager;
 
     public async Task<BrandDetailsDto> Handle(UpdateBrandCommand request, CancellationToken cancellationToken)
     {
@@ -27,6 +29,13 @@ internal class UpdateBrandCommandHandler(
         {
             _logger.LogError("Validation failed: {@Errors}", validationResult.Errors);
             throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
+        }
+
+        var user = await _userManager.FindByIdAsync(request.CurrentUserId);
+        if (user is null)
+        {
+            _logger.LogError("User with ID '{UserId}' not found", request.CurrentUserId);
+            throw new NotFoundException<ApplicationUser>($"with ID '{request.CurrentUserId}'");
         }
 
         try
@@ -57,7 +66,7 @@ internal class UpdateBrandCommandHandler(
                 await repo.GetAsync(new GetBrandByWebsiteUrlSpecification(request.Dto.WebsiteUrl), cancellationToken, true) is not null)
                 throw new AlreadyExistsException<Brand>($"with WebsiteUrl '{request.Dto.WebsiteUrl}'");
             _mapper.Map(request.Dto, brand);
-            brand.ModifiedBy = request.ModifiedBy;
+            brand.ModifiedBy = user.Id;
             brand.ModifiedAt = DateTime.UtcNow;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

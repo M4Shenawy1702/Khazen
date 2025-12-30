@@ -1,45 +1,41 @@
 ﻿using Khazen.Application.Common.Interfaces.IPurchaseModule.IPurchaseInvoice;
-using Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Commands.Create;
+using Khazen.Application.DOTs.PurchaseModule.PurchaseInvoiceDtos;
 using Khazen.Domain.Entities.PurchaseModule;
 using Khazen.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace Khazen.Application.Common.Services.PurchaseModuleServices.PurchaseInvoiceServices
 {
-    public class PurchaseInvoiceFactory : IInvoiceFactoryService
+    public class PurchaseInvoiceFactory(ILogger<PurchaseInvoiceFactory> logger) : IInvoiceFactoryService
     {
-        private readonly ILogger<PurchaseInvoiceFactory> _logger;
-
-        public PurchaseInvoiceFactory(ILogger<PurchaseInvoiceFactory> logger)
-        {
-            _logger = logger;
-        }
+        private readonly ILogger<PurchaseInvoiceFactory> _logger = logger;
 
         public async Task<PurchaseInvoice> CreateInvoiceAsync(
             PurchaseReceipt receipt,
-          CreateInvoiceForReceiptCommand command,
+          CreatePurchaseInvoiceDto Dto,
+           string userId,
             CancellationToken cancellationToken = default)
         {
             _logger.LogDebug("Creating PurchaseInvoice from Receipt {ReceiptId}", receipt.Id);
 
             if (receipt == null) throw new ArgumentNullException(nameof(receipt));
-            if (command.Dto == null) throw new ArgumentNullException(nameof(command.Dto));
+            if (Dto == null) throw new ArgumentNullException(nameof(Dto));
 
             if (receipt.Items == null || receipt.Items.Count == 0)
                 throw new BadRequestException("Cannot create invoice for a receipt without items.");
 
-            if (command.Dto.Items.GroupBy(x => x.ProductId).Any(g => g.Count() > 1))
+            if (Dto.Items.GroupBy(x => x.ProductId).Any(g => g.Count() > 1))
                 throw new BadRequestException("Duplicate product items are not allowed.");
 
             if (receipt.Invoice != null)
                 throw new BadRequestException("Receipt already has an invoice.");
 
-            if (receipt.Items.Count != command.Dto.Items.Count)
+            if (receipt.Items.Count != Dto.Items.Count)
                 throw new BadRequestException("Invoice items count must match receipt items count.");
 
-            var invoice = new PurchaseInvoice(receipt.Id, receipt.PurchaseOrder!.SupplierId, command.Dto.InvoiceNumber, command.CurrentUserId, command.Dto.InvoiceDate, command.Dto.Notes);
+            var invoice = new PurchaseInvoice(receipt.Id, receipt.PurchaseOrder!.SupplierId, Dto.InvoiceNumber, userId, Dto.InvoiceDate, Dto.Notes);
 
-            var dtoMap = command.Dto.Items.ToDictionary(i => i.ProductId, i => i);
+            var dtoMap = Dto.Items.ToDictionary(i => i.ProductId, i => i);
 
             foreach (var item in receipt.Items)
             {

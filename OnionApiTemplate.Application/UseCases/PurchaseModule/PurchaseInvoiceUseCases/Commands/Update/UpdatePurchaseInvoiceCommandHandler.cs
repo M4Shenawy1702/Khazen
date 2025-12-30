@@ -8,31 +8,25 @@ using Microsoft.Extensions.Logging;
 
 namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Commands.Update
 {
-    public class UpdatePurchaseInvoiceCommandHandler
-        : IRequestHandler<UpdatePurchaseInvoiceCommand, PurchaseInvoiceDto>
+    public class UpdatePurchaseInvoiceCommandHandler(
+        IUnitOfWork unitOfWork,
+        IMapper mapper,
+        IValidator<UpdatePurchaseInvoiceCommand> validator,
+        ILogger<UpdatePurchaseInvoiceCommandHandler> logger,
+        UserManager<ApplicationUser> userManager)
+                : IRequestHandler<UpdatePurchaseInvoiceCommand, PurchaseInvoiceDto>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-        private readonly IValidator<UpdatePurchaseInvoiceCommand> _validator;
-        private readonly ILogger<UpdatePurchaseInvoiceCommandHandler> _logger;
-
-        public UpdatePurchaseInvoiceCommandHandler(
-            IUnitOfWork unitOfWork,
-            IMapper mapper,
-            IValidator<UpdatePurchaseInvoiceCommand> validator,
-            ILogger<UpdatePurchaseInvoiceCommandHandler> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
-            _validator = validator;
-            _logger = logger;
-        }
+        private readonly IUnitOfWork _unitOfWork = unitOfWork;
+        private readonly IMapper _mapper = mapper;
+        private readonly IValidator<UpdatePurchaseInvoiceCommand> _validator = validator;
+        private readonly ILogger<UpdatePurchaseInvoiceCommandHandler> _logger = logger;
+        private readonly UserManager<ApplicationUser> _userManager = userManager;
 
         public async Task<PurchaseInvoiceDto> Handle(UpdatePurchaseInvoiceCommand request, CancellationToken cancellationToken)
         {
             _logger.LogInformation(
                 "Starting UpdatePurchaseInvoice | InvoiceId={InvoiceId} | ModifiedBy={User}",
-                request.Id, request.ModifiedBy);
+                request.Id, request.CurrentUserId);
 
             var validation = await _validator.ValidateAsync(request, cancellationToken);
             if (!validation.IsValid)
@@ -45,7 +39,12 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
 
                 throw new BadRequestException(validation.Errors.Select(e => e.ErrorMessage).ToList());
             }
-
+            var user = await _userManager.FindByIdAsync(request.CurrentUserId);
+            if (user is null)
+            {
+                _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
             try
@@ -114,21 +113,16 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
                     "Updating invoice values | InvoiceId={InvoiceId} | NewNumber={NewNumber}",
                     invoice.Id, request.Dto.InvoiceNumber);
 
-                invoice.Modify(
-                    request.Dto.InvoiceNumber,
-                    request.ModifiedBy,
-                    request.Dto.Notes);
+                invoice.Modify(request.Dto.InvoiceNumber, user.Id, request.Dto.Notes);
 
                 _logger.LogInformation(
                     "Invoice updated | InvoiceId={InvoiceId} | ModifiedBy={User}",
-                    invoice.Id, request.ModifiedBy);
+                    invoice.Id, user.Id);
 
                 _logger.LogDebug("Recalculating totals | InvoiceId={InvoiceId}", invoice.Id);
                 invoice.RecalculateTotals();
 
-                _logger.LogDebug(
-                    "Updating related PurchaseReceipt | ReceiptId={ReceiptId}",
-                    invoice.PurchaseReceiptId);
+                _logger.LogDebug("Updating related PurchaseReceipt | ReceiptId={ReceiptId}", invoice.PurchaseReceiptId);
 
                 _logger.LogDebug("Committing transaction | InvoiceId={InvoiceId}", invoice.Id);
 

@@ -37,6 +37,9 @@ namespace Khazen.Domain.Entities.InventoryModule
         public int MinimumStock { get; set; } = 0;
         public string SKU { get; set; } = string.Empty;
 
+        public string? ToggledBy { get; set; }
+        public DateTime ToggledAt { get; set; }
+
         public Guid BrandId { get; set; }
         public Brand? Brand { get; set; }
 
@@ -53,6 +56,12 @@ namespace Khazen.Domain.Entities.InventoryModule
 
             if (MinimumStock < 0)
                 throw new InvalidOperationException("Minimum stock cannot be negative.");
+        }
+        public void Toggle(string toggledBy)
+        {
+            IsDeleted = !IsDeleted;
+            ToggledBy = toggledBy;
+            ToggledAt = DateTime.Now;
         }
     }
 }

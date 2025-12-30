@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.InventoryModule.WarehouseUseCases.Commands.Create
 {
-    public record CreateWarehouseCommand(CreateWarehouseDto Dto, string CreatedBy) : IRequest<WarehouseDto>;
+    public record CreateWarehouseCommand(CreateWarehouseDto Dto, string CurrentUserId) : IRequest<WarehouseDto>;
 }

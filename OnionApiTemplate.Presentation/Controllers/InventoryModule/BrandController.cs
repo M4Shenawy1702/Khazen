@@ -7,21 +7,20 @@ using Khazen.Application.UseCases.InventoryModule.BrandUseCases.Queries.GetById;
 using Khazen.Presentation.Attributes;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Khazen.Presentation.Controllers.InventoryModule
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class BrandController : ControllerBase
+    public class BrandController(ISender sender) : ControllerBase
     {
-        private readonly ISender _sender;
+        private readonly ISender _sender = sender;
 
-        public BrandController(ISender sender)
-        {
-            _sender = sender;
-        }
-        [RedisCache]
-        [HttpGet]
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                        ?? throw new UnauthorizedAccessException("User identity not available.");
+
+        [RedisCache(600)]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BrandDto>>> GetAll()
         {
@@ -29,6 +28,7 @@ namespace Khazen.Presentation.Controllers.InventoryModule
             return Ok(result);
         }
 
+        [RedisCache(600)]
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<BrandDto>> GetById(Guid id)
         {
@@ -37,26 +37,27 @@ namespace Khazen.Presentation.Controllers.InventoryModule
         }
 
         [HttpPost]
-        public async Task<ActionResult<BrandDetailsDto>> Create([FromBody] CreateBrandCommand command)
+        [CacheInvalidate("/api/Brand")]
+        public async Task<ActionResult<BrandDetailsDto>> Create([FromBody] CreateBrandDto dto)
         {
-            var result = await _sender.Send(command);
+            var result = await _sender.Send(new CreateBrandCommand(dto, CurrentUserId));
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
-        [HttpPut]
-        public async Task<ActionResult<BrandDetailsDto>> Update([FromBody] UpdateBrandCommand command)
+        [HttpPut("{id:guid}")]
+        [CacheInvalidate("/api/Brand")]
+        public async Task<ActionResult<BrandDetailsDto>> Update(Guid id, [FromBody] UpdateBrandDto dto)
         {
-            var result = await _sender.Send(command);
+            var result = await _sender.Send(new UpdateBrandCommand(id, dto, CurrentUserId));
             return Ok(result);
         }
 
-        [HttpDelete("{id:guid}")]
-        public async Task<ActionResult<bool>> Delete(Guid id)
+        [HttpPatch("Toggle/{id:guid}")]
+        [CacheInvalidate("/api/Brand")]
+        public async Task<ActionResult> Toggle(Guid id)
         {
-            var createdBy = User?.Identity?.Name;
-            if (createdBy == null) return BadRequest("User not found");
-            var result = await _sender.Send(new ToggleBrandCommand(id, createdBy));
-            return result ? NoContent() : NotFound();
+            await _sender.Send(new ToggleBrandCommand(id, CurrentUserId));
+            return NoContent();
         }
     }
 }

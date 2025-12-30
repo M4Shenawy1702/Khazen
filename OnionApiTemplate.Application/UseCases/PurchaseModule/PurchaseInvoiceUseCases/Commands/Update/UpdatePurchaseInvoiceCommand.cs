@@ -2,6 +2,5 @@
 
 namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Commands.Update
 {
-    public record UpdatePurchaseInvoiceCommand(Guid Id, UpdatePurchaseInvoiceDto Dto, string ModifiedBy)
-        : IRequest<PurchaseInvoiceDto>;
+    public record UpdatePurchaseInvoiceCommand(Guid Id, UpdatePurchaseInvoiceDto Dto, string CurrentUserId) : IRequest<PurchaseInvoiceDto>;
 }

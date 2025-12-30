@@ -66,8 +66,6 @@ namespace Khazen.Application.UseCases.AccountingModule.AccountUseCases.Commands.
 
                 _logger.LogDebug("Cache keys invalidated after updating account: {AccountId}", account.Id);
 
-                await _cacheService.RemoveByPatternAsync("Khazen_/api/Accounts*");
-
                 return _mapper.Map<AccountDetailsDto>(account);
             }
             catch (Exception ex)

@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.InventoryModule.ProductUseCases.Commands.Add
 {
-    public record AddProductCommand(AddProductDto Dto) : IRequest<ProductDto>;
+    public record AddProductCommand(AddProductDto Dto, string CurrentUserId) : IRequest<ProductDto>;
 }

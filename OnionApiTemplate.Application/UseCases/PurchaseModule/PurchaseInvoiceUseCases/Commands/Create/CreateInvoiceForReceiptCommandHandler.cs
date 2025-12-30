@@ -16,8 +16,8 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
     IPurchaseInvoiceStockCostService stockService,
     IJournalEntryService journalService,
     ILogger<CreateInvoiceForReceiptCommandHandler> logger,
-    UserManager<ApplicationUser> userManager
-) : IRequestHandler<CreateInvoiceForReceiptCommand, PurchaseInvoiceDto>
+    UserManager<ApplicationUser> userManager)
+        : IRequestHandler<CreateInvoiceForReceiptCommand, PurchaseInvoiceDto>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
@@ -39,7 +39,7 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
                 throw new BadRequestException(validationResult.Errors.Select(e => e.ErrorMessage).ToList());
             }
 
-            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            var user = await _userManager.FindByIdAsync(request.CurrentUserId);
             if (user is null)
             {
                 _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
@@ -65,11 +65,11 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
                     throw new DomainException("Invoice already created for this receipt.");
                 }
 
-                var invoice = await _invoiceFactory.CreateInvoiceAsync(receipt, request, cancellationToken);
+                var invoice = await _invoiceFactory.CreateInvoiceAsync(receipt, request.Dto, user.Id, cancellationToken);
 
                 await _stockService.UpdateStockAndCostAsync(invoice, receipt.WarehouseId, cancellationToken);
 
-                var journalEntry = await _journalService.GeneratePurchaseJournalEntryAsync(invoice, user.UserName!, cancellationToken);
+                var journalEntry = await _journalService.GeneratePurchaseJournalEntryAsync(invoice, user.Id, cancellationToken);
                 invoice.MarkAsPosted(journalEntry.Id);
 
                 var invoiceRepo = _unitOfWork.GetRepository<PurchaseInvoice, Guid>();
