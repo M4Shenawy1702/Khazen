@@ -6,32 +6,28 @@ using Khazen.Domain.Entities.PurchaseModule;
 using Khazen.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
-namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Commands.Delete
+namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Commands.Reverse
 {
-    public class DeletePurchaseInvoiceCommandHandler(
+    public class ReversePurchaseInvoiceCommandHandler(
         IUnitOfWork unitOfWork,
-        INumberSequenceService numberSequenceService,
-        IGetSystemValues getSystemValues,
-        ILogger<DeletePurchaseInvoiceCommandHandler> logger,
+        ILogger<ReversePurchaseInvoiceCommandHandler> logger,
         IJournalEntryService journalEntryService,
         UserManager<ApplicationUser> userManager
-    ) : IRequestHandler<DeletePurchaseInvoiceCommand, bool>
+    ) : IRequestHandler<ReversePurchaseInvoiceCommand, bool>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
-        private readonly INumberSequenceService _numberSequenceService = numberSequenceService;
-        private readonly IGetSystemValues _getSystemValues = getSystemValues;
-        private readonly ILogger<DeletePurchaseInvoiceCommandHandler> _logger = logger;
+        private readonly ILogger<ReversePurchaseInvoiceCommandHandler> _logger = logger;
         private readonly IJournalEntryService _journalEntryService = journalEntryService;
         private readonly UserManager<ApplicationUser> _userManager = userManager;
 
-        public async Task<bool> Handle(DeletePurchaseInvoiceCommand request, CancellationToken cancellationToken)
+        public async Task<bool> Handle(ReversePurchaseInvoiceCommand request, CancellationToken cancellationToken)
         {
             _logger.LogDebug("Starting DeletePurchaseInvoiceCommandHandler for InvoiceId: {InvoiceId}", request.Id);
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
             _logger.LogDebug("Transaction started.");
 
-            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            var user = await _userManager.FindByIdAsync(request.CurrentUserId);
             if (user is null)
             {
                 _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
@@ -54,13 +50,13 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
                     throw new BadRequestException("Cannot delete an invoice that has payments.");
                 }
 
-                var reversalEntry = await _journalEntryService.GenerateReversalPurchaseInvoiceAsync(invoice, user.UserName!, cancellationToken);
+                var reversalEntry = await _journalEntryService.GenerateReversalPurchaseInvoiceAsync(invoice, user.Id, cancellationToken);
 
                 var journalEntryRepo = _unitOfWork.GetRepository<JournalEntry, Guid>();
                 await journalEntryRepo.AddAsync(reversalEntry, cancellationToken);
                 _logger.LogInformation("Reversal JournalEntry {JournalNo} created for Invoice {InvoiceNo}", reversalEntry.JournalEntryNumber, invoice.InvoiceNumber);
 
-                invoice.Reverse(reversalEntry.Id);
+                invoice.Reverse(reversalEntry.Id, user.Id);
 
                 _logger.LogInformation("Invoice {InvoiceNo} marked for deletion.", invoice.InvoiceNumber);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);

@@ -2,6 +2,5 @@
 
 namespace Khazen.Application.UseCases.InventoryModule.BrandUseCases.Commands.Update
 {
-    public record UpdateBrandCommand(
-        Guid Id, UpdateBrandDto Dto, string ModifiedBy) : IRequest<BrandDetailsDto>;
+    public record UpdateBrandCommand(Guid Id, UpdateBrandDto Dto, string CurrentUserId) : IRequest<BrandDetailsDto>;
 }

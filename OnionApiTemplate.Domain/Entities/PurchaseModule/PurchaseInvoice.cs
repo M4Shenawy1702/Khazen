@@ -75,6 +75,8 @@ namespace Khazen.Domain.Entities.PurchaseModule
         }
         public bool IsPosted => JournalEntryId != Guid.Empty;
         public bool IsReversed => ReversalJournalEntryId != null;
+        public string? ReversedBy { get; set; }
+        public DateTime? ReversedAt { get; set; }
 
         public void AddItem(PurchaseInvoiceItem item)
         {
@@ -140,7 +142,7 @@ namespace Khazen.Domain.Entities.PurchaseModule
             InvoiceStatus = InvoiceStatus.Posted;
         }
 
-        public void Reverse(Guid reversalJournalEntryId)
+        public void Reverse(Guid reversalJournalEntryId, string reversedBy)
         {
             if (!IsPosted) throw new InvalidOperationException("Only posted invoices can be reversed.");
             if (IsReversed) throw new InvalidOperationException("Invoice already reversed.");
@@ -149,7 +151,8 @@ namespace Khazen.Domain.Entities.PurchaseModule
             ReversalJournalEntryId = reversalJournalEntryId;
             InvoiceStatus = InvoiceStatus.Reversed;
             IsDeleted = true;
-            ModifiedAt = DateTime.UtcNow;
+            ReversedAt = DateTime.UtcNow;
+            ReversedBy = reversedBy;
         }
 
         private void EnsureNotPostedOrReversed()

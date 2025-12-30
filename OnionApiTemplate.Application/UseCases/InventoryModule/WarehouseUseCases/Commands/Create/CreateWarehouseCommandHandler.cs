@@ -16,57 +16,65 @@ namespace Khazen.Application.UseCases.InventoryModule.WarehouseUseCases.Commands
 
         public async Task<WarehouseDto> Handle(CreateWarehouseCommand request, CancellationToken cancellationToken)
         {
-            try
+            _logger.LogInformation("CreateWarehouse: Request initiated for '{Name}' by User {UserId}",
+                request.Dto.Name, request.CurrentUserId);
+
+            var validationResult = await _validator.ValidateAsync(request, cancellationToken);
+            if (!validationResult.IsValid)
             {
-                _logger.LogInformation("CreateWarehouseCommandHandler started.");
-                _logger.LogDebug("Creating warehouse with data: {@Warehouse}", request.Dto);
-
-                var validationResult = await _validator.ValidateAsync(request, cancellationToken);
-                if (!validationResult.IsValid)
-                {
-                    _logger.LogError("Validation failed: {@Errors}", validationResult.Errors);
-                    throw new BadRequestException(validationResult.Errors.Select(e => e.ErrorMessage).ToList());
-                }
-
-                var user = await _userManager.FindByNameAsync(request.CreatedBy);
-                if (user is null)
-                {
-                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.CreatedBy);
-                    throw new NotFoundException<ApplicationUser>(request.CreatedBy);
-                }
-
-                var repo = _unitOfWork.GetRepository<Warehouse, Guid>();
-
-                await ValidateDuplication(request, repo, cancellationToken);
-
-                var entity = _mapper.Map<Warehouse>(request.Dto);
-                await repo.AddAsync(entity, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                _logger.LogInformation("Warehouse {WarehouseId} created successfully.", entity.Id);
-
-                return _mapper.Map<WarehouseDto>(entity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogCritical(ex, "Unexpected error occurred while creating warehouse.");
-                throw;
+                var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
+                _logger.LogWarning("CreateWarehouse: Validation failed for '{Name}': {Errors}",
+                    request.Dto.Name, string.Join(", ", errors));
+                throw new BadRequestException(errors);
             }
 
-        }
+            var repo = _unitOfWork.GetRepository<Warehouse, Guid>();
 
-        private async Task ValidateDuplication(CreateWarehouseCommand request, IGenericRepository<Warehouse, Guid> repo, CancellationToken cancellationToken)
-        {
-            if (await repo.AnyAsync(w => w.Name == request.Dto.Name, cancellationToken))
+            _logger.LogDebug("CreateWarehouse: Checking dependencies and unique constraints in parallel.");
+
+            var userTask = _userManager.FindByIdAsync(request.CurrentUserId);
+            var nameExistsTask = repo.AnyAsync(w => w.Name == request.Dto.Name, cancellationToken);
+            var phoneExistsTask = repo.AnyAsync(w => w.PhoneNumber == request.Dto.PhoneNumber, cancellationToken);
+
+            await Task.WhenAll(userTask, nameExistsTask, phoneExistsTask);
+
+            var user = await userTask;
+            if (user == null)
             {
-                _logger.LogError("Warehouse with Name '{Name}' already exists.", request.Dto.Name);
+                _logger.LogWarning("CreateWarehouse: User '{UserId}' not found.", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
+
+            if (await nameExistsTask)
+            {
+                _logger.LogWarning("CreateWarehouse: Conflict - Name '{Name}' already exists.", request.Dto.Name);
                 throw new AlreadyExistsException<Warehouse>($"with Name '{request.Dto.Name}'");
             }
 
-            if (await repo.AnyAsync(w => w.PhoneNumber == request.Dto.PhoneNumber, cancellationToken))
+            if (await phoneExistsTask)
             {
-                _logger.LogError("Warehouse with PhoneNumber '{PhoneNumber}' already exists.", request.Dto.PhoneNumber);
+                _logger.LogWarning("CreateWarehouse: Conflict - Phone '{Phone}' already exists.", request.Dto.PhoneNumber);
                 throw new AlreadyExistsException<Warehouse>($"with PhoneNumber '{request.Dto.PhoneNumber}'");
+            }
+
+            try
+            {
+                var warehouse = _mapper.Map<Warehouse>(request.Dto);
+                warehouse.CreatedBy = user.Id;
+                warehouse.CreatedAt = DateTime.UtcNow;
+
+                await repo.AddAsync(warehouse, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("CreateWarehouse: Warehouse '{Name}' (ID: {Id}) created successfully.",
+                    warehouse.Name, warehouse.Id);
+
+                return _mapper.Map<WarehouseDto>(warehouse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "CreateWarehouse: Critical failure while saving warehouse '{Name}'.", request.Dto.Name);
+                throw;
             }
         }
     }

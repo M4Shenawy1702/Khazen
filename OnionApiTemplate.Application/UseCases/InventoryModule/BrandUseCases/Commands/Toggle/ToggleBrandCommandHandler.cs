@@ -5,15 +5,22 @@ using Microsoft.Extensions.Logging;
 
 namespace Khazen.Application.UseCases.InventoryModule.BrandUseCases.Commands.Delete
 {
-    internal class ToggleBrandCommandHandler(IUnitOfWork unitOfWork, ILogger<ToggleBrandCommandHandler> logger)
+    internal class ToggleBrandCommandHandler(IUnitOfWork _unitOfWork, ILogger<ToggleBrandCommandHandler> _logger,
+        UserManager<ApplicationUser> _userManager)
         : IRequestHandler<ToggleBrandCommand, bool>
     {
-        private readonly IUnitOfWork _unitOfWork = unitOfWork;
-        private readonly ILogger<ToggleBrandCommandHandler> _logger = logger;
+
 
         public async Task<bool> Handle(ToggleBrandCommand request, CancellationToken cancellationToken)
         {
             _logger.LogDebug("Starting DeleteBrandCommandHandler for Brand ID: {BrandId}", request.Id);
+
+            var user = await _userManager.FindByIdAsync(request.CurrentUserId);
+            if (user is null)
+            {
+                _logger.LogError("User with ID '{UserId}' not found", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>($"with ID '{request.CurrentUserId}'");
+            }
 
             try
             {
@@ -35,7 +42,7 @@ namespace Khazen.Application.UseCases.InventoryModule.BrandUseCases.Commands.Del
                         $"Cannot delete brand '{brand.Name}' because it has related products.");
                 }
 
-                brand.Toggle(request.ModifiedBy);
+                brand.Toggle(user.Id);
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 

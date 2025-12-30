@@ -1,4 +1,5 @@
-﻿using Khazen.Domain.Entities.InventoryModule;
+﻿using Khazen.Application.Specification.InventoryModule.WareHouseSpesifications;
+using Khazen.Domain.Entities.InventoryModule;
 using Khazen.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -14,43 +15,78 @@ namespace Khazen.Application.UseCases.InventoryModule.WarehouseUseCases.Commands
 
         public async Task<bool> Handle(ToggleWarehouseCommand request, CancellationToken cancellationToken)
         {
+            _logger.LogInformation("ToggleWarehouse: Operation started for Warehouse ID: {Id} by User: {UserId}",
+                request.Id, request.CurrentUserId);
+
+            var validationResult = await _validator.ValidateAsync(request, cancellationToken);
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
+                _logger.LogWarning("ToggleWarehouse: Validation failed for ID: {Id}. Errors: {Errors}",
+                    request.Id, string.Join(" | ", errors));
+                throw new BadRequestException(errors);
+            }
+
             try
             {
-                _logger.LogDebug("Start toggling warehouse with id: {Id}", request.Id);
-
-                var validationResult = await _validator.ValidateAsync(request, cancellationToken);
-                if (!validationResult.IsValid)
-                {
-                    _logger.LogWarning("Validation failed for toggling warehouse with id: {Id}. Errors: {Errors}", request.Id, validationResult.Errors);
-                    throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
-                }
                 var repo = _unitOfWork.GetRepository<Warehouse, Guid>();
-                var warehouse = await repo.GetByIdAsync(request.Id, cancellationToken, trackChanges: true);
-                if (warehouse is null)
-                {
-                    _logger.LogInformation("warehouse with id: {Id} not found", request.Id);
-                    throw new NotFoundException<Warehouse>(request.Id);
-                }
-                var user = await _userManager.FindByNameAsync(request.ModifiedBy);
+
+                _logger.LogDebug("ToggleWarehouse: Fetching User and Warehouse (including Stock) in parallel for {Id}", request.Id);
+
+                var userTask = _userManager.FindByIdAsync(request.CurrentUserId);
+                var warehouseTask = repo.GetAsync(new GetWareHouseByIdSpec(request.Id), cancellationToken);
+
+                await Task.WhenAll(userTask, warehouseTask);
+
+                var user = await userTask;
+                var warehouse = await warehouseTask;
+
                 if (user is null)
                 {
-                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.ModifiedBy);
-                    throw new NotFoundException<ApplicationUser>(request.ModifiedBy);
+                    _logger.LogError("ToggleWarehouse: Audit failure. User {UserId} not found.", request.CurrentUserId);
+                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
 
-                warehouse.Toggle(request.ModifiedBy);
+                if (warehouse is null)
+                {
+                    _logger.LogWarning("ToggleWarehouse: Warehouse {Id} not found.", request.Id);
+                    throw new NotFoundException<Warehouse>(request.Id);
+                }
+
+
+                if (!warehouse.IsDeleted)
+                {
+                    _logger.LogDebug("ToggleWarehouse: Checking stock levels for Warehouse '{Name}' before deactivation.", warehouse.Name);
+
+                    var hasStock = warehouse.WarehouseProducts?.Any(wp => wp.QuantityInStock > 0) ?? false;
+                    if (hasStock)
+                    {
+                        var totalStock = warehouse.WarehouseProducts?.Sum(wp => wp.QuantityInStock) ?? 0;
+                        _logger.LogWarning("ToggleWarehouse: Conflict - Warehouse '{Name}' ({Id}) still contains {Stock} units.",
+                            warehouse.Name, warehouse.Id, totalStock);
+
+                        throw new ConflictException($"Cannot deactivate warehouse '{warehouse.Name}' because it still contains stock ({totalStock} units).");
+                    }
+                }
+
+                bool previousState = warehouse.IsDeleted;
+                _logger.LogDebug("ToggleWarehouse: Toggling state for '{Name}'. Current IsDeleted: {State}",
+                    warehouse.Name, previousState);
+
+                warehouse.Toggle(user.Id);
+
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger.LogInformation("warehouse with id: {Id} toggled successfully , now it is: {IsDeleted}", request.Id, warehouse.IsDeleted);
+                _logger.LogInformation("ToggleWarehouse: Success. Warehouse '{Name}' ({Id}) flipped from Deleted:{Old} to Deleted:{New}. Action by: {UserId}",
+                   warehouse.Name, warehouse.Id, previousState, warehouse.IsDeleted, user.Id);
 
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not DomainException)
             {
-                _logger.LogCritical(ex, "Unexpected error occurred while toggle warehouse.");
+                _logger.LogCritical(ex, "ToggleWarehouse: Critical system failure while toggling Warehouse {Id}", request.Id);
                 throw;
             }
-
         }
     }
 }

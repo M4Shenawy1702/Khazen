@@ -11,9 +11,11 @@ namespace Khazen.Application.UseCases.InventoryModule.BrandUseCases.Commands.Cre
         IUnitOfWork _unitOfWork,
         IMapper _mapper,
         IValidator<CreateBrandCommand> _validator,
-        ILogger<CreateBrandCommandHandler> _logger)
+        ILogger<CreateBrandCommandHandler> _logger,
+        UserManager<ApplicationUser> _userManager)
         : IRequestHandler<CreateBrandCommand, BrandDto>
     {
+
         public async Task<BrandDto> Handle(CreateBrandCommand request, CancellationToken cancellationToken)
         {
             _logger.LogDebug("Starting CreateBrandCommandHandler for Brand Name: {BrandName}", request.Dto.Name);
@@ -24,7 +26,12 @@ namespace Khazen.Application.UseCases.InventoryModule.BrandUseCases.Commands.Cre
                 _logger.LogError("Validation failed: {@Errors}", validationResult.Errors);
                 throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
             }
-
+            var user = await _userManager.FindByIdAsync(request.CurrentUserId);
+            if (user is null)
+            {
+                _logger.LogError("User with ID '{UserId}' not found", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>($"with ID '{request.CurrentUserId}'");
+            }
             try
             {
                 var repo = _unitOfWork.GetRepository<Brand, Guid>();
@@ -50,7 +57,7 @@ namespace Khazen.Application.UseCases.InventoryModule.BrandUseCases.Commands.Cre
                 }
 
                 var brand = _mapper.Map<Brand>(request.Dto);
-                brand.CreatedBy = request.CreatedBy;
+                brand.CreatedBy = user.Id;
                 brand.CreatedAt = DateTime.UtcNow;
 
                 await repo.AddAsync(brand, cancellationToken);

@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.InventoryModule.ProductUseCases.Commands.Update
 {
-    public record UpdateProductCommand(Guid Id, UpdateProductDto Dto) : IRequest<ProductDto>;
+    public record UpdateProductCommand(Guid Id, UpdateProductDto Dto, string CurrentUserId) : IRequest<ProductDto>;
 }

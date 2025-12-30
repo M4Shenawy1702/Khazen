@@ -7,20 +7,20 @@ using Khazen.Application.UseCases.InventoryModule.CategoryUseCases.Queries.GetBy
 using Khazen.Presentation.Attributes;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Khazen.Presentation.Controllers.InventoryModule
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class CategoryController : ControllerBase
+    public class CategoryController(ISender sender) : ControllerBase
     {
-        private readonly ISender _sender;
+        private readonly ISender _sender = sender;
 
-        public CategoryController(ISender sender)
-        {
-            _sender = sender;
-        }
-        [RedisCache]
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                        ?? throw new UnauthorizedAccessException("User identity not available.");
+
+        [RedisCache(600)]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<CategoryDto>>> GetAll()
         {
@@ -28,6 +28,7 @@ namespace Khazen.Presentation.Controllers.InventoryModule
             return Ok(result);
         }
 
+        [RedisCache(600)]
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<CategoryDetailsDto>> GetById(Guid id)
         {
@@ -36,24 +37,27 @@ namespace Khazen.Presentation.Controllers.InventoryModule
         }
 
         [HttpPost]
-        public async Task<ActionResult<CategoryDto>> Create([FromBody] CreateCategoryCommand command)
+        [CacheInvalidate("/api/Category")]
+        public async Task<ActionResult<CategoryDto>> Create([FromBody] CreateCategoryDto dto)
         {
-            var result = await _sender.Send(command);
+            var result = await _sender.Send(new CreateCategoryCommand(dto, CurrentUserId));
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
         [HttpPut("{id:guid}")]
+        [CacheInvalidate("/api/Category")]
         public async Task<ActionResult<CategoryDetailsDto>> Update(Guid id, [FromBody] UpdateCategoryDto dto)
         {
-            var result = await _sender.Send(new UpdateCategoryCommand(id, dto));
+            var result = await _sender.Send(new UpdateCategoryCommand(id, dto, CurrentUserId));
             return Ok(result);
         }
 
-        [HttpDelete("{id:guid}")]
-        public async Task<ActionResult<bool>> Delete(Guid id)
+        [HttpPatch("Toggle/{id:guid}")]
+        [CacheInvalidate("/api/Category")]
+        public async Task<ActionResult> Toggle(Guid id)
         {
-            var result = await _sender.Send(new DeleteCategoryCommand(id));
-            return result;
+            await _sender.Send(new ToggleCategoryCommand(id, CurrentUserId));
+            return NoContent();
         }
     }
 }

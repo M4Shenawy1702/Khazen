@@ -1,18 +1,18 @@
 ﻿using Khazen.Application.Common.Interfaces.IPurchaseModule.IPurchaseInvoice;
-using Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Commands.Create;
+using Khazen.Application.DOTs.PurchaseModule.PurchaseInvoiceDtos;
 using Khazen.Domain.Entities.PurchaseModule;
 
 namespace Khazen.Application.Common.Services.PurchaseModuleServices.PurchaseInvoiceServices
 {
     public class InvoiceFactoryService : IInvoiceFactoryService
     {
-        public async Task<PurchaseInvoice> CreateInvoiceAsync(PurchaseReceipt receipt, CreateInvoiceForReceiptCommand command, CancellationToken cancellationToken = default)
+        public async Task<PurchaseInvoice> CreateInvoiceAsync(PurchaseReceipt receipt, CreatePurchaseInvoiceDto Dto, string userId, CancellationToken cancellationToken = default)
         {
             if (receipt == null)
                 throw new ArgumentNullException(nameof(receipt));
 
-            if (command.Dto == null)
-                throw new ArgumentNullException(nameof(command.Dto));
+            if (Dto == null)
+                throw new ArgumentNullException(nameof(Dto));
 
             if (receipt.Items == null || receipt.Items.Count == 0)
                 throw new InvalidOperationException("Cannot create invoice for a receipt without items.");
@@ -20,7 +20,7 @@ namespace Khazen.Application.Common.Services.PurchaseModuleServices.PurchaseInvo
             if (receipt.Invoice != null)
                 throw new InvalidOperationException("Receipt already has an invoice.");
 
-            if (receipt.Items.Count != command.Dto.Items.Count)
+            if (receipt.Items.Count != Dto.Items.Count)
                 throw new InvalidOperationException("Invoice items count must match receipt items count.");
 
             //var invoice = new PurchaseInvoice
@@ -40,8 +40,8 @@ namespace Khazen.Application.Common.Services.PurchaseModuleServices.PurchaseInvo
             //        UnitPrice = i.UnitPrice
             //    }).ToList()
             //};
-            var invoice = new PurchaseInvoice(receipt.Id, receipt.PurchaseOrder!.SupplierId, command.Dto.InvoiceNumber, command.CurrentUserId, command.Dto.InvoiceDate, command.Dto.Notes);
-            foreach (var item in command.Dto.Items)
+            var invoice = new PurchaseInvoice(receipt.Id, receipt.PurchaseOrder!.SupplierId, Dto.InvoiceNumber, userId, Dto.InvoiceDate, Dto.Notes);
+            foreach (var item in Dto.Items)
             {
                 invoice.AddItem(new PurchaseInvoiceItem
                 {
