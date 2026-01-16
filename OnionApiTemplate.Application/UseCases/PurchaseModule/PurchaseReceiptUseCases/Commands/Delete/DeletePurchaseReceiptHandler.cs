@@ -9,12 +9,14 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseReceiptUseCases.Com
     internal class DeletePurchaseReceiptHandler(
         IUnitOfWork unitOfWork,
         IDeletePurchaseReceiptService deleteService,
-        ILogger<DeletePurchaseReceiptHandler> logger
+        ILogger<DeletePurchaseReceiptHandler> logger,
+        UserManager<ApplicationUser> userManager
     ) : IRequestHandler<DeletePurchaseReceiptCommand, bool>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IDeletePurchaseReceiptService _deleteService = deleteService;
         private readonly ILogger<DeletePurchaseReceiptHandler> _logger = logger;
+        private readonly UserManager<ApplicationUser> _userManager = userManager;
 
         public async Task<bool> Handle(DeletePurchaseReceiptCommand request, CancellationToken cancellationToken)
         {
@@ -29,12 +31,17 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseReceiptUseCases.Com
                 _logger.LogWarning("PurchaseReceipt {PurchaseReceiptId} not found.", request.Id);
                 throw new NotFoundException<PurchaseReceipt>(request.Id);
             }
-
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            if (user is null)
+            {
+                _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                await _deleteService.DeleteReceiptAsync(purchaseReceipt, request.ModifiedBy, request.RowVersion, cancellationToken);
+                await _deleteService.DeleteReceiptAsync(purchaseReceipt, user.Id, request.RowVersion, cancellationToken);
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 

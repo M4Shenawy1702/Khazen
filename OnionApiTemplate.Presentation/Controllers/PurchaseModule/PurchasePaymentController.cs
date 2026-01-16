@@ -7,19 +7,18 @@ using Khazen.Application.UseCases.PurchaseModule.PurchasePaymentUseCases.Queries
 using Khazen.Application.UseCases.PurchaseModule.PurchasePaymentUseCases.Queries.GetById;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Khazen.Api.Controllers.PurchaseModule
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class PurchasePaymentController : ControllerBase
+    public class PurchasePaymentController(IMediator mediator) : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly IMediator _mediator = mediator;
 
-        public PurchasePaymentController(IMediator mediator)
-        {
-            _mediator = mediator;
-        }
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                              ?? throw new UnauthorizedAccessException("User identity not available.");
 
         [HttpGet]
         public async Task<ActionResult<PaginatedResult<PurchasePaymentDto>>> GetAll([FromQuery] PurchasePaymentQueryParameters queryParameters)
@@ -38,20 +37,15 @@ namespace Khazen.Api.Controllers.PurchaseModule
         [HttpPost]
         public async Task<ActionResult<PurchasePaymentDto>> Create([FromBody] CreatePurchasePaymentDto dto)
         {
-            var user = User.Identity?.Name;
-            if (user == null)
-                return BadRequest("User not found");
-            var result = await _mediator.Send(new CreatePurchasePaymentCommand(dto, user));
+            var result = await _mediator.Send(new CreatePurchasePaymentCommand(dto, CurrentUserId));
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
         [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<IActionResult> Delete(Guid id, [FromHeader(Name = "RowVersion")] string rowVersion)
         {
-            var user = User.Identity?.Name;
-            if (user == null)
-                return BadRequest("User not found");
-            await _mediator.Send(new DeletePurchasePaymentCommand(id, user));
+            var versionBytes = Convert.FromBase64String(rowVersion);
+            await _mediator.Send(new ReversePurchasePaymentCommand(id, versionBytes, CurrentUserId));
             return NoContent();
         }
     }

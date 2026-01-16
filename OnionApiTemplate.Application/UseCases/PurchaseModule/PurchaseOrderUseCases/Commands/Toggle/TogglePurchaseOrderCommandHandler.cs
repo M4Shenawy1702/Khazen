@@ -1,4 +1,5 @@
-﻿using Khazen.Domain.Common.Enums;
+﻿using Khazen.Application.Specification.PurchaseModule.PurchaseOrderSpecifications;
+using Khazen.Domain.Common.Enums;
 using Khazen.Domain.Entities.PurchaseModule;
 using Khazen.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -15,56 +16,73 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseOrderUseCases.Comma
 
         public async Task<bool> Handle(TogglePurchaseOrderCommand request, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(request.ModifiedBy))
-                throw new BadRequestException("ModifiedBy is required.");
+            _logger.LogInformation("TogglePO: Processing toggle for ID {Id} by User {User}", request.Id, request.CurrentUserId);
 
-            _logger.LogInformation("Starting TogglePurchaseOrderCommandHandler for PurchaseOrder Id: {PurchaseOrderId}", request.Id);
+            var userTask = _userManager.FindByNameAsync(request.CurrentUserId);
+            var repository = _unitOfWork.GetRepository<PurchaseOrder, Guid>();
+            var purchaseOrderTask = repository.GetAsync(new GetPurhaseOrderByIdSpec(request.Id), cancellationToken);
+
+            await Task.WhenAll(userTask, purchaseOrderTask);
+
+            var user = await userTask;
+            if (user == null)
+            {
+                _logger.LogWarning("TogglePO: User {User} not found", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
+            var purchaseOrder = await purchaseOrderTask;
+            if (purchaseOrder == null)
+            {
+                _logger.LogWarning("TogglePO: PO {Id} not found", request.Id);
+                throw new NotFoundException<PurchaseOrder>(request.Id);
+            }
+
+            if (purchaseOrder.Status != PurchaseOrderStatus.Cancelled)
+            {
+                var hasReceipts = await _unitOfWork.GetRepository<PurchaseReceipt, Guid>()
+                    .AnyAsync(r => r.PurchaseOrderId == request.Id, cancellationToken);
+
+                if (hasReceipts)
+                {
+                    _logger.LogWarning("TogglePO: Blocked. PO {Id} has associated receipts.", request.Id);
+                    throw new DomainException("Cannot cancel an order that has already been received. Reverse the receipts first.");
+                }
+            }
+            else
+            {
+                var duplicateExists = await repository.AnyAsync(po =>
+                    po.OrderNumber == purchaseOrder.OrderNumber &&
+                    po.Status != PurchaseOrderStatus.Cancelled, cancellationToken);
+
+                if (duplicateExists)
+                    throw new DomainException("Cannot reactivate: OrderNumber is already in use by another active order.");
+            }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
             try
             {
-                var user = await _userManager.FindByNameAsync(request.ModifiedBy);
-                if (user is null)
-                {
-                    _logger.LogWarning("User not found. UserName: {ModifiedBy}", request.ModifiedBy);
-                    throw new NotFoundException<ApplicationUser>(request.ModifiedBy);
-                }
-
-                var repository = _unitOfWork.GetRepository<PurchaseOrder, Guid>();
-                var purchaseOrder = await repository.GetByIdAsync(request.Id, cancellationToken);
-                if (purchaseOrder is null)
-                {
-                    _logger.LogWarning("PurchaseOrder not found. Id: {PurchaseOrderId}", request.Id);
-                    throw new NotFoundException<PurchaseOrder>(request.Id);
-                }
-
                 purchaseOrder.SetRowVersion(request.RowVersion);
+                purchaseOrder.Toggle(user.Id);
 
-                if (purchaseOrder.Status == PurchaseOrderStatus.Cancelled)
-                {
-                    var duplicateExists = await repository.AnyAsync(po => po.OrderNumber == purchaseOrder.OrderNumber && po.Status != PurchaseOrderStatus.Cancelled, cancellationToken);
-                    if (duplicateExists)
-                        throw new DomainException("Cannot reactivate order because OrderNumber is already used.");
-                }
+                _logger.LogDebug("TogglePO: Saving state change to DB for PO {OrderNo}", purchaseOrder.OrderNumber);
 
-                purchaseOrder.Toggle(request.ModifiedBy);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                _logger.LogInformation("TogglePurchaseOrderCommandHandler completed successfully for PurchaseOrder Id: {PurchaseOrderId}", request.Id);
+                _logger.LogInformation("TogglePO: SUCCESS. New status: {Status}", purchaseOrder.Status);
                 return true;
             }
             catch (DbUpdateConcurrencyException)
             {
-                throw new ConcurrencyException("The purchase order was updated by another user. Please reload and try again.");
+                _logger.LogWarning("TogglePO: Concurrency conflict for PO {Id}", request.Id);
+                throw new ConcurrencyException("The order was modified by someone else. Please refresh.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in TogglePurchaseOrderCommandHandler for PurchaseOrder Id: {PurchaseOrderId}", request.Id);
+                _logger.LogError(ex, "TogglePO: Critical failure for PO {Id}", request.Id);
                 await _unitOfWork.RollbackTransactionAsync(cancellationToken);
                 throw;
             }
         }
-
     }
 
 }

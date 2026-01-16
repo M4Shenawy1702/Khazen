@@ -5,11 +5,6 @@ namespace Khazen.Application.Common.Interfaces.IPurchaseModule.IPurchaseReceipt
 {
     public interface IPurchaseReceiptUpdateService
     {
-        Task UpdateReceiptAsync(
-            UpdatePurchaseReceiptCommand request,
-            PurchaseReceipt receipt,
-            PurchaseOrder order,
-            CancellationToken cancellationToken = default
-        );
+        Task UpdateReceiptAsync(UpdatePurchaseReceiptCommand request, PurchaseReceipt receipt, PurchaseOrder order, CancellationToken cancellationToken = default);
     }
 }

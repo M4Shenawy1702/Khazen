@@ -26,6 +26,14 @@ namespace Khazen.Infrastructure.Persistence.Repositories
             return (IGenericRepository<TEntity, TKey>)repository!;
         }
 
+        public void SetOriginalRowVersion<TEntity>(TEntity entity, byte[] rowVersion)
+        where TEntity : class
+        {
+            _context.Entry(entity)
+                .Property("RowVersion")
+                .OriginalValue = rowVersion;
+        }
+
         public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
         {
             if (_transaction is not null) return;

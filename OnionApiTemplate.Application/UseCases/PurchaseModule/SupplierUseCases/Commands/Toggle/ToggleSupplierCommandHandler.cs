@@ -13,7 +13,6 @@ namespace Khazen.Application.UseCases.PurchaseModule.SupplierUseCases.Commands.D
         public async Task<bool> Handle(ToggleSupplierCommand request, CancellationToken cancellationToken)
         {
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
-            //todo: when add a purchase check if supplier is active
             try
             {
                 var repo = _unitOfWork.GetRepository<Supplier, Guid>();
@@ -24,11 +23,10 @@ namespace Khazen.Application.UseCases.PurchaseModule.SupplierUseCases.Commands.D
                     throw new NotFoundException<Supplier>(request.Id);
                 }
 
-                _logger.LogInformation("Toggling supplier. Id: {SupplierId}, ModifiedBy: {User}",
-                    supplier.Id, request.ModifiedBy);
+                _logger.LogInformation("Toggling supplier. Id: {SupplierId}, CurrentUserId: {User}",
+                    supplier.Id, request.CurrentUserId);
 
-                supplier.Toggle(request.ModifiedBy);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                supplier.Toggle(request.CurrentUserId);
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 

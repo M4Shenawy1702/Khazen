@@ -20,6 +20,8 @@ namespace Khazen.Domain.Entities.PurchaseModule
         public Guid? InvoiceId { get; private set; }
         public PurchaseInvoice? Invoice { get; private set; }
 
+        public DateTime? DeletedAt { get; private set; }
+        public string? DeletedBy { get; private set; }
         [Timestamp]
         public byte[]? RowVersion { get; private set; }
 
@@ -56,15 +58,15 @@ namespace Khazen.Domain.Entities.PurchaseModule
             Items.Add(item);
         }
 
-        public void MarkAsDeleted(string modifiedBy)
+        public void MarkAsDeleted(string deletedBy)
         {
             if (IsDeleted)
                 throw new InvalidOperationException("Receipt is already deleted.");
 
             IsDeleted = true;
 
-            ModifiedAt = DateTime.UtcNow;
-            ModifiedBy = modifiedBy;
+            DeletedAt = DateTime.UtcNow;
+            DeletedBy = deletedBy;
         }
 
     }

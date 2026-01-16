@@ -13,5 +13,8 @@ namespace Khazen.Domain.IRepositoty
 
         IGenericRepository<TEntity, TKey> GetRepository<TEntity, TKey>()
             where TEntity : BaseEntity<TKey>;
+
+        void SetOriginalRowVersion<TEntity>(TEntity entity, byte[] rowVersion)
+        where TEntity : class;
     }
 }

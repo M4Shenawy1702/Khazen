@@ -6,6 +6,7 @@ using Khazen.Application.UseCases.PurchaseModule.SupplierUseCases.Queries.GetAll
 using Khazen.Application.UseCases.PurchaseModule.SupplierUseCases.Queries.GetById;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Khazen.Presentation.Controllers.PurchaseModule
 {
@@ -15,6 +16,8 @@ namespace Khazen.Presentation.Controllers.PurchaseModule
     {
         private readonly IMediator _mediator = mediator;
 
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                       ?? throw new UnauthorizedAccessException("User identity not available.");
         [HttpGet]
         public async Task<ActionResult<List<SupplierDto>>> GetAll()
         {
@@ -32,30 +35,21 @@ namespace Khazen.Presentation.Controllers.PurchaseModule
         [HttpPost]
         public async Task<ActionResult<SupplierDto>> Create([FromBody] CreateSupplierDto dto)
         {
-            var user = User.Identity?.Name;
-            if (user == null)
-                return BadRequest("User not found");
-            var result = await _mediator.Send(new CreateSupplierCommand(dto, user));
+            var result = await _mediator.Send(new CreateSupplierCommand(dto, CurrentUserId));
             return Ok(result);
         }
 
         [HttpPut("{id:guid}")]
         public async Task<ActionResult<SupplierDto>> Update([FromBody] UpdateSupplierDto dto, Guid id)
         {
-            var user = User.Identity?.Name;
-            if (user == null)
-                return BadRequest("User not found");
-            var result = await _mediator.Send(new UpdateSupplierCommand(id, dto, user));
+            var result = await _mediator.Send(new UpdateSupplierCommand(id, dto, CurrentUserId));
             return Ok(result);
         }
 
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var user = User.Identity?.Name;
-            if (user == null)
-                return BadRequest("User not found");
-            await _mediator.Send(new ToggleSupplierCommand(id, user));
+            await _mediator.Send(new ToggleSupplierCommand(id, CurrentUserId));
             return NoContent();
         }
     }

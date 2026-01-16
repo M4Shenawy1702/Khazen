@@ -45,11 +45,11 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseReceiptUseCases.Com
 
             try
             {
-                var user = await _userManager.FindByNameAsync(request.CreatedBy);
+                var user = await _userManager.FindByNameAsync(request.CurrentUserId);
                 if (user is null)
                 {
-                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.CreatedBy);
-                    throw new NotFoundException<ApplicationUser>(request.CreatedBy);
+                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.CurrentUserId);
+                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
                 _logger.LogDebug("Fetching Purchase Order with ID {PurchaseOrderId}", request.Dto.PurchaseOrderId);
                 var order = await GetPurchaseOrderAsync(request.Dto.PurchaseOrderId, cancellationToken);
@@ -58,7 +58,7 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseReceiptUseCases.Com
                 var warehouse = await GetWarehouseAsync(request.Dto.WarehouseId, cancellationToken);
 
                 _logger.LogDebug("Creating Purchase Receipt entity...");
-                var receipt = _receiptFactory.CreateReceipt(order, warehouse, user.UserName!, request);
+                var receipt = _receiptFactory.CreateReceipt(order, warehouse, user.Id, request);
 
                 _logger.LogDebug("Adjusting warehouse stock...");
                 await _warehouseStockService.AdjustStockAsync(receipt, cancellationToken);

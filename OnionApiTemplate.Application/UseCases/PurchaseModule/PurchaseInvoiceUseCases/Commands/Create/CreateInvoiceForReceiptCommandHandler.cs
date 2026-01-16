@@ -30,58 +30,59 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
 
         public async Task<PurchaseInvoiceDto> Handle(CreateInvoiceForReceiptCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Starting CreateInvoiceForReceiptCommandHandler for Receipt {ReceiptId}", request.Dto.PurchaseReceiptId);
+            _logger.LogInformation("CreateInvoice: Initiating invoice for Receipt {ReceiptId} by User {UserId}",
+                request.Dto.PurchaseReceiptId, request.CurrentUserId);
 
             var validationResult = await _validator.ValidateAsync(request, cancellationToken);
             if (!validationResult.IsValid)
             {
-                _logger.LogWarning("Validation failed: {@Errors}", validationResult.Errors);
+                _logger.LogWarning("CreateInvoice: Validation failed for Receipt {ReceiptId}", request.Dto.PurchaseReceiptId);
                 throw new BadRequestException(validationResult.Errors.Select(e => e.ErrorMessage).ToList());
             }
 
-            var user = await _userManager.FindByIdAsync(request.CurrentUserId);
-            if (user is null)
+            var userTask = _userManager.FindByIdAsync(request.CurrentUserId);
+            var receiptRepo = _unitOfWork.GetRepository<PurchaseReceipt, Guid>();
+            var receiptTask = receiptRepo.GetAsync(new GetPurchaseReceiptWithAllIncludesByIdSpec(request.Dto.PurchaseReceiptId), cancellationToken);
+
+            await Task.WhenAll(userTask, receiptTask);
+
+            var user = await userTask ?? throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            var receipt = await receiptTask ?? throw new NotFoundException<PurchaseReceipt>(request.Dto.PurchaseReceiptId);
+
+            if (receipt.InvoiceId is not null)
             {
-                _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
-                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+                _logger.LogWarning("CreateInvoice: Conflict. Receipt {ReceiptId} already has Invoice {InvoiceId}",
+                    receipt.Id, receipt.InvoiceId);
+                throw new ConflictException("An invoice has already been generated for this receipt.");
             }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
             try
             {
-                var receiptRepo = _unitOfWork.GetRepository<PurchaseReceipt, Guid>();
-                var receipt = await receiptRepo.GetAsync(
-                    new GetPurchaseReceiptWithAllIncludesByIdSpec(request.Dto.PurchaseReceiptId),
-                    cancellationToken);
-                if (receipt is null)
-                {
-                    _logger.LogWarning("Receipt {ReceiptId} not found.", request.Dto.PurchaseReceiptId);
-                    throw new NotFoundException<PurchaseReceipt>(request.Dto.PurchaseReceiptId);
-                }
-
-                if (receipt.InvoiceId is not null)
-                {
-                    _logger.LogWarning("Invoice already exists for Receipt {ReceiptId}.", request.Dto.PurchaseReceiptId);
-                    throw new DomainException("Invoice already created for this receipt.");
-                }
-
+                _logger.LogDebug("CreateInvoice: Generating Invoice object via Factory.");
                 var invoice = await _invoiceFactory.CreateInvoiceAsync(receipt, request.Dto, user.Id, cancellationToken);
 
+                _logger.LogDebug("CreateInvoice: Recalculating Stock Costs for Warehouse {WarehouseId}", receipt.WarehouseId);
                 await _stockService.UpdateStockAndCostAsync(invoice, receipt.WarehouseId, cancellationToken);
 
+                _logger.LogDebug("CreateInvoice: Generating Financial Journal Entries.");
                 var journalEntry = await _journalService.GeneratePurchaseJournalEntryAsync(invoice, user.Id, cancellationToken);
+
                 invoice.MarkAsPosted(journalEntry.Id);
 
                 var invoiceRepo = _unitOfWork.GetRepository<PurchaseInvoice, Guid>();
                 await invoiceRepo.AddAsync(invoice, cancellationToken);
+
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                _logger.LogInformation("Invoice {InvoiceNumber} created successfully.", invoice.InvoiceNumber);
+                _logger.LogInformation("CreateInvoice: SUCCESS. Invoice {InvoiceNo} posted. Total: {Total}. Journal: {JournalId}",
+                    invoice.InvoiceNumber, invoice.TotalAmount, journalEntry.Id);
+
                 return _mapper.Map<PurchaseInvoiceDto>(invoice);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating invoice for Receipt {ReceiptId}. Rolling back...", request.Dto.PurchaseReceiptId);
+                _logger.LogCritical(ex, "CreateInvoice: FATAL ERROR for Receipt {ReceiptId}. Rolling back transaction.", request.Dto.PurchaseReceiptId);
                 await _unitOfWork.RollbackTransactionAsync(cancellationToken);
                 throw;
             }

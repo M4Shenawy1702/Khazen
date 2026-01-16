@@ -41,6 +41,10 @@ namespace Khazen.Domain.Entities.PurchaseModule
 
         [Timestamp]
         public byte[]? RowVersion { get; private set; }
+        public bool IsPosted => JournalEntryId != Guid.Empty;
+        public bool IsReversed => ReversalJournalEntryId != null;
+        public string? ReversedBy { get; set; }
+        public DateTime? ReversedAt { get; set; }
 
         protected PurchaseInvoice() { }
 
@@ -73,10 +77,7 @@ namespace Khazen.Domain.Entities.PurchaseModule
             InvoiceNumber = invoiceNumber;
             Notes = notes;
         }
-        public bool IsPosted => JournalEntryId != Guid.Empty;
-        public bool IsReversed => ReversalJournalEntryId != null;
-        public string? ReversedBy { get; set; }
-        public DateTime? ReversedAt { get; set; }
+
 
         public void AddItem(PurchaseInvoiceItem item)
         {

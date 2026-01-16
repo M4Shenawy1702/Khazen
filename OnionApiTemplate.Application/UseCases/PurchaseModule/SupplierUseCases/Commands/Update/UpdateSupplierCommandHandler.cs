@@ -30,14 +30,14 @@ namespace Khazen.Application.UseCases.PurchaseModule.SupplierUseCases.Commands.U
                 if (!validationResult.IsValid)
                     throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
 
-                var user = await _userManager.FindByNameAsync(request.ModifiedBy);
+                var user = await _userManager.FindByNameAsync(request.CurrentUserId);
                 if (user is null)
                 {
-                    _logger.LogInformation("User {User} not found", request.ModifiedBy);
-                    throw new NotFoundException<ApplicationUser>(request.ModifiedBy);
+                    _logger.LogInformation("User {User} not found", request.CurrentUserId);
+                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
 
-                _logger.LogInformation("User {User} is updating supplier {SupplierId}", request.ModifiedBy, request.Id);
+                _logger.LogInformation("User {User} is updating supplier {SupplierId}", request.CurrentUserId, request.Id);
 
                 var repo = _unitOfWork.GetRepository<Supplier, Guid>();
                 var supplier = await repo.GetAsync(new GetSupplierByIdSpecification(request.Id), cancellationToken);
@@ -61,18 +61,19 @@ namespace Khazen.Application.UseCases.PurchaseModule.SupplierUseCases.Commands.U
                     throw new AlreadyExistsException<Supplier>($"with Email '{request.Dto.Email}'");
 
                 _mapper.Map(request.Dto, supplier);
+                supplier.ModifiedBy = user.Id;
+                supplier.ModifiedAt = DateTime.UtcNow;
 
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                _logger.LogInformation("Supplier {SupplierId} updated successfully by {User}", supplier.Id, request.ModifiedBy);
+                _logger.LogInformation("Supplier {SupplierId} updated successfully by {User}", supplier.Id, request.CurrentUserId);
 
                 return _mapper.Map<SupplierDto>(supplier);
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-                _logger.LogError(ex, "Error updating supplier {SupplierId} by {User}", request.Id, request.ModifiedBy);
+                _logger.LogError(ex, "Error updating supplier {SupplierId} by {User}", request.Id, request.CurrentUserId);
                 throw;
             }
         }
