@@ -1,5 +1,8 @@
-﻿using Khazen.Domain.Common.Enums;
-using Khazen.Domain.Entities.PurchaseModule;
+﻿using Khazen.Application.DOTs.PurchaseModule.PurchaseInvoiceDtos;
+using Khazen.Application.DOTs.PurchaseModule.PurchaseOrderDots;
+using Khazen.Application.DOTs.PurchaseModule.PurchasePaymentDots;
+using Khazen.Application.DOTs.PurchaseModule.PurchaseReceiptDtos;
+using Khazen.Domain.Common.Enums;
 
 namespace Khazen.Application.DOTs.PurchaseModule.PurchaseOrderDtss
 {
@@ -7,24 +10,25 @@ namespace Khazen.Application.DOTs.PurchaseModule.PurchaseOrderDtss
     {
         public Guid Id { get; set; }
         public bool IsDeleted { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? ModifiedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? DeletedAt { get; set; } = DateTime.UtcNow;
-        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public DateTime? ModifiedAt { get; set; }
+        public string CreatedBy { get; set; }
         public string? ModifiedBy { get; set; }
-        public string OrderNumber { get; private set; } = string.Empty;
-        public DateTime? DeliveryDate { get; private set; }
+        public string OrderNumber { get; set; }
+        public DateTime? DeliveryDate { get; set; }
 
-        public PurchaseOrderStatus Status { get; private set; } = PurchaseOrderStatus.Pending;
-        public string? Notes { get; private set; }
+        public PurchaseOrderStatus Status { get; set; }
+        public string? Notes { get; set; }
 
-        public Guid SupplierId { get; private set; }
-        public Supplier? Supplier { get; private set; }
+        public Guid SupplierId { get; set; }
+        public string? SupplierName { get; set; }
 
-        public ICollection<PurchaseOrderItem> Items { get; private set; } = new List<PurchaseOrderItem>();
-        public ICollection<PurchaseReceipt> PurchaseReceipts { get; private set; } = new List<PurchaseReceipt>();
-        public ICollection<PurchaseInvoice> PurchaseInvoices { get; private set; } = new List<PurchaseInvoice>();
-        public ICollection<PurchasePayment> PurchasePayments { get; private set; } = new List<PurchasePayment>();
+        public ICollection<PurchaseOrderItemDto> Items { get; set; } = [];
+        public ICollection<PurchaseReceiptDto> PurchaseReceipts { get; set; } = [];
+        public ICollection<PurchaseInvoiceDto> PurchaseInvoices { get; set; } = [];
+        public ICollection<PurchasePaymentDto> PurchasePayments { get; set; } = [];
+
         public decimal TotalAmount { get; set; }
+        public byte[]? RowVersion { get; set; }
     }
 }

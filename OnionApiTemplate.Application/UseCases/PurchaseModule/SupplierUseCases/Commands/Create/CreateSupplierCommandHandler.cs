@@ -7,12 +7,12 @@ using Microsoft.Extensions.Logging;
 namespace Khazen.Application.UseCases.PurchaseModule.SupplierUseCases.Commands.Create
 {
     internal class CreateSupplierCommandHandler(
-     IUnitOfWork unitOfWork,
-     IMapper mapper,
-     IValidator<CreateSupplierCommand> validator,
-     UserManager<ApplicationUser> userManager,
-     ILogger<CreateSupplierCommandHandler> logger)
-     : IRequestHandler<CreateSupplierCommand, SupplierDto>
+        IUnitOfWork unitOfWork,
+        IMapper mapper,
+        IValidator<CreateSupplierCommand> validator,
+        UserManager<ApplicationUser> userManager,
+        ILogger<CreateSupplierCommandHandler> logger
+    ) : IRequestHandler<CreateSupplierCommand, SupplierDto>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
@@ -22,25 +22,25 @@ namespace Khazen.Application.UseCases.PurchaseModule.SupplierUseCases.Commands.C
 
         public async Task<SupplierDto> Handle(CreateSupplierCommand request, CancellationToken cancellationToken)
         {
+            _logger.LogInformation("Starting CreateSupplierCommand for Name: {SupplierName}", request.Dto.Name);
+
+            var validationResult = await _validator.ValidateAsync(request, cancellationToken);
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
+                _logger.LogWarning("Validation failed for CreateSupplierCommand: {Errors}", string.Join(", ", errors));
+                throw new BadRequestException(errors);
+            }
+
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                _logger.LogInformation("Starting CreateSupplierCommand for Name: {SupplierName}", request.Dto.Name);
-
-                var validationResult = await _validator.ValidateAsync(request, cancellationToken);
-                if (!validationResult.IsValid)
-                {
-                    _logger.LogWarning("Validation failed for CreateSupplierCommand: {Errors}",
-                        validationResult.Errors.Select(x => x.ErrorMessage));
-                    throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
-                }
-
-                var user = await _userManager.FindByNameAsync(request.CreatedBy);
+                var user = await _userManager.FindByNameAsync(request.CurrentUserId);
                 if (user is null)
                 {
-                    _logger.LogError("User not found. UserId: {CreatedBy}", request.CreatedBy);
-                    throw new NotFoundException<ApplicationUser>(request.CreatedBy);
+                    _logger.LogError("User not found. UserId: {CurrentUserId}", request.CurrentUserId);
+                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
 
                 var repo = _unitOfWork.GetRepository<Supplier, Guid>();
@@ -64,9 +64,10 @@ namespace Khazen.Application.UseCases.PurchaseModule.SupplierUseCases.Commands.C
                     throw new AlreadyExistsException<Supplier>($"with Email '{request.Dto.Email}'");
                 }
 
-                var entity = _mapper.Map<Supplier>(request);
+                var entity = _mapper.Map<Supplier>(request.Dto);
+                entity.CreatedBy = user.Id;
+
                 await repo.AddAsync(entity, cancellationToken);
-                await _unitOfWork.SaveChangesAsync();
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
@@ -75,9 +76,10 @@ namespace Khazen.Application.UseCases.PurchaseModule.SupplierUseCases.Commands.C
 
                 return _mapper.Map<SupplierDto>(entity);
             }
-            catch
+            catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+                _logger.LogError(ex, "Failed to create supplier. Name: {SupplierName}", request.Dto.Name);
                 throw;
             }
         }

@@ -10,13 +10,13 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseReceiptUseCases.Que
         IUnitOfWork unitOfWork,
         IMapper mapper,
         ILogger<GetPurchaseReceiptByIdHandler> logger
-    ) : IRequestHandler<GetPurchaseReceiptByIdQuery, PurchaseReceiptDto>
+    ) : IRequestHandler<GetPurchaseReceiptByIdQuery, PurchaseReceiptDetailsDto>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<GetPurchaseReceiptByIdHandler> _logger = logger;
 
-        public async Task<PurchaseReceiptDto> Handle(GetPurchaseReceiptByIdQuery request, CancellationToken cancellationToken)
+        public async Task<PurchaseReceiptDetailsDto> Handle(GetPurchaseReceiptByIdQuery request, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Fetching Purchase Receipt by ID: {PurchaseReceiptId}", request.Id);
 
@@ -36,7 +36,7 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseReceiptUseCases.Que
 
             _logger.LogInformation("Purchase Receipt with ID {PurchaseReceiptId} retrieved successfully", request.Id);
 
-            return _mapper.Map<PurchaseReceiptDto>(receipt);
+            return _mapper.Map<PurchaseReceiptDetailsDto>(receipt);
         }
     }
 }

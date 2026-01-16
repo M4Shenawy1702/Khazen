@@ -2,7 +2,6 @@
 
 namespace Khazen.Application.UseCases.PurchaseModule.PurchaseReceiptUseCases.Commands.Create
 {
-    public record CreatePurchaseReceiptCommand(CreatePurchaseReceiptDto Dto, string CreatedBy)
-        : IRequest<PurchaseReceiptDto>;
+    public record CreatePurchaseReceiptCommand(CreatePurchaseReceiptDto Dto, string CurrentUserId) : IRequest<PurchaseReceiptDto>;
 
 }

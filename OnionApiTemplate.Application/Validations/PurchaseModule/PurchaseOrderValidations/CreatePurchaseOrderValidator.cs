@@ -6,7 +6,7 @@ namespace Khazen.Application.Validations.PurchaseModule.PurchaseOrderValidations
     {
         public CreatePurchaseOrderValidator()
         {
-            RuleFor(x => x.CreatedBy)
+            RuleFor(x => x.CurrentUserId)
                 .NotEmpty().WithMessage("CreatedBy is required.");
 
             RuleFor(x => x.Dto.SupplierId)

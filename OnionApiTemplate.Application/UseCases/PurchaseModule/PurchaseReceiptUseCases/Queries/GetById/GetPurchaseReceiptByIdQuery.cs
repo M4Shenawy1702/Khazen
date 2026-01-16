@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.PurchaseModule.PurchaseReceiptUseCases.Queries.GetById
 {
-    public record GetPurchaseReceiptByIdQuery(Guid Id) : IRequest<PurchaseReceiptDto>;
+    public record GetPurchaseReceiptByIdQuery(Guid Id) : IRequest<PurchaseReceiptDetailsDto>;
 }

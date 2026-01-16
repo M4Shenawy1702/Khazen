@@ -2,6 +2,6 @@
 
 namespace Khazen.Application.UseCases.PurchaseModule.PurchaseReceiptUseCases.Commands.Update
 {
-    public record UpdatePurchaseReceiptCommand(Guid Id, UpdatePurchaseReceiptDto Dto, string ModifiedBy)
+    public record UpdatePurchaseReceiptCommand(Guid Id, UpdatePurchaseReceiptDto Dto, string CurrentUserId)
         : IRequest<PurchaseReceiptDto>;
 }

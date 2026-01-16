@@ -3,6 +3,6 @@ using Khazen.Application.DOTs.PurchaseModule.PurchaseOrderDtss;
 
 namespace Khazen.Application.UseCases.PurchaseModule.PurchaseOrderUseCases.Commands.Update
 {
-    public record UpdatePurchaseOrderCommand(Guid Id, UpdatePurchaseOrderDto Dto, string ModifiedBy) : IRequest<PurchaseOrderDto>;
+    public record UpdatePurchaseOrderCommand(Guid Id, UpdatePurchaseOrderDto Dto, string CurrentUserId) : IRequest<PurchaseOrderDto>;
 
 }

@@ -1,6 +1,5 @@
 ﻿using Khazen.Application.DOTs.PurchaseModule.PurchaseInvoiceDtos;
 using Khazen.Application.Specification.PurchaseModule.PurchaseInvoiceSpecifications;
-using Khazen.Application.Specification.PurchaseModule.PurchaseReceiptSpecifications;
 using Khazen.Domain.Common.Enums;
 using Khazen.Domain.Entities.PurchaseModule;
 using Khazen.Domain.Exceptions;
@@ -24,121 +23,75 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
 
         public async Task<PurchaseInvoiceDto> Handle(UpdatePurchaseInvoiceCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation(
-                "Starting UpdatePurchaseInvoice | InvoiceId={InvoiceId} | ModifiedBy={User}",
+            _logger.LogInformation("UpdatePurchaseInvoice: Initiating update for Invoice {InvoiceId}. Triggered by User {UserId}",
                 request.Id, request.CurrentUserId);
 
             var validation = await _validator.ValidateAsync(request, cancellationToken);
             if (!validation.IsValid)
             {
-                var errors = string.Join(", ", validation.Errors.Select(e => e.ErrorMessage));
-
-                _logger.LogWarning(
-                    "Validation failed | InvoiceId={InvoiceId} | Errors={Errors}",
-                    request.Id, errors);
+                _logger.LogWarning("UpdatePurchaseInvoice: Validation failed for Invoice {InvoiceId}. Errors: {Errors}",
+                    request.Id, string.Join(" | ", validation.Errors.Select(e => e.ErrorMessage)));
 
                 throw new BadRequestException(validation.Errors.Select(e => e.ErrorMessage).ToList());
             }
-            var user = await _userManager.FindByIdAsync(request.CurrentUserId);
-            if (user is null)
+
+            _logger.LogDebug("UpdatePurchaseInvoice: Fetching User {UserId} and Invoice {InvoiceId} in parallel.",
+                request.CurrentUserId, request.Id);
+
+            var userTask = _userManager.FindByIdAsync(request.CurrentUserId);
+            var invoiceRepo = _unitOfWork.GetRepository<PurchaseInvoice, Guid>();
+            var invoiceTask = invoiceRepo.GetAsync(new GetPurchaseInvoiceWithAllIncludesByIdSpec(request.Id), cancellationToken);
+
+            await Task.WhenAll(userTask, invoiceTask);
+
+            var user = await userTask;
+            if (user == null)
             {
-                _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
+                _logger.LogError("UpdatePurchaseInvoice: Identity Failure. User {UserId} not found in database.", request.CurrentUserId);
                 throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
+
+            var invoice = await invoiceTask;
+            if (invoice == null)
+            {
+                _logger.LogWarning("UpdatePurchaseInvoice: Resource Failure. Invoice {InvoiceId} does not exist.", request.Id);
+                throw new NotFoundException<PurchaseInvoice>(request.Id);
+            }
+
+            _logger.LogDebug("UpdatePurchaseInvoice: Validating Invoice state for {InvoiceNumber}. Current Status: {Status}, IsPosted: {IsPosted}",
+                invoice.InvoiceNumber, invoice.InvoiceStatus, invoice.IsPosted);
+
+            if (invoice.IsPosted || invoice.InvoiceStatus != InvoiceStatus.Draft)
+            {
+                _logger.LogWarning("UpdatePurchaseInvoice: Business Rule Violation. Attempted to modify immutable Invoice {InvoiceNumber}. Status: {Status}",
+                    invoice.InvoiceNumber, invoice.InvoiceStatus);
+
+                throw new BadRequestException("Only Draft invoices can be updated. Posted invoices must be reversed.");
+            }
+
+            _logger.LogInformation("UpdatePurchaseInvoice: Opening Database Transaction for Invoice {InvoiceNumber}.", invoice.InvoiceNumber);
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                _logger.LogDebug(
-                    "Fetching PurchaseInvoice with includes | InvoiceId={InvoiceId}",
-                    request.Id);
-
-                var invoiceRepo = _unitOfWork.GetRepository<PurchaseInvoice, Guid>();
-                var invoice = await invoiceRepo.GetAsync(
-                    new GetPurchaseInvoiceWithAllIncludesByIdSpec(request.Id),
-                    cancellationToken);
-
-                if (invoice == null)
-                {
-                    _logger.LogWarning("PurchaseInvoice not found | InvoiceId={InvoiceId}", request.Id);
-                    throw new NotFoundException<PurchaseInvoice>(request.Id);
-                }
-
-                _logger.LogDebug(
-                    "Fetching related PurchaseReceipt | ReceiptId={ReceiptId}",
-                    invoice.PurchaseReceiptId);
-
-                var receiptRepo = _unitOfWork.GetRepository<PurchaseReceipt, Guid>();
-                var receipt = await receiptRepo.GetAsync(
-                    new GetPurchaseReceiptWithAllIncludesByIdSpec(invoice.PurchaseReceiptId),
-                    cancellationToken);
-
-                if (receipt == null)
-                {
-                    _logger.LogWarning(
-                        "Related PurchaseReceipt not found | ReceiptId={ReceiptId}",
-                        invoice.PurchaseReceiptId);
-
-                    throw new NotFoundException<PurchaseReceipt>(invoice.PurchaseReceiptId);
-                }
-
-                if (invoice.InvoiceStatus != InvoiceStatus.Draft)
-                {
-                    _logger.LogWarning(
-                        "Attempt to update non-draft invoice | InvoiceId={InvoiceId} | Status={Status}",
-                        invoice.Id, invoice.InvoiceStatus);
-
-                    throw new BadRequestException("Only pending invoices can be updated.");
-                }
-
-                if (invoice.IsPosted)
-                {
-                    _logger.LogWarning(
-                        "Attempt to update posted invoice | InvoiceId={InvoiceId}",
-                        invoice.Id);
-
-                    throw new BadRequestException("Cannot update a posted invoice. Reverse it instead.");
-                }
-
-                if (invoice.IsReversed)
-                {
-                    _logger.LogWarning(
-                        "Attempt to update reversed invoice | InvoiceId={InvoiceId}",
-                        invoice.Id);
-
-                    throw new BadRequestException("Cannot update a reversed invoice.");
-                }
-
-                _logger.LogInformation(
-                    "Updating invoice values | InvoiceId={InvoiceId} | NewNumber={NewNumber}",
-                    invoice.Id, request.Dto.InvoiceNumber);
+                _logger.LogDebug("UpdatePurchaseInvoice: Applying modifications to Invoice {InvoiceNumber}. ModifiedBy: {UserName}",
+                    invoice.InvoiceNumber, user.UserName);
 
                 invoice.Modify(request.Dto.InvoiceNumber, user.Id, request.Dto.Notes);
 
-                _logger.LogInformation(
-                    "Invoice updated | InvoiceId={InvoiceId} | ModifiedBy={User}",
-                    invoice.Id, user.Id);
-
-                _logger.LogDebug("Recalculating totals | InvoiceId={InvoiceId}", invoice.Id);
+                _logger.LogTrace("UpdatePurchaseInvoice: Triggering total recalculation for Invoice {InvoiceNumber}.", invoice.InvoiceNumber);
                 invoice.RecalculateTotals();
-
-                _logger.LogDebug("Updating related PurchaseReceipt | ReceiptId={ReceiptId}", invoice.PurchaseReceiptId);
-
-                _logger.LogDebug("Committing transaction | InvoiceId={InvoiceId}", invoice.Id);
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                _logger.LogInformation(
-                    "PurchaseInvoice update completed successfully | InvoiceId={InvoiceId}",
-                    invoice.Id);
+                _logger.LogInformation("UpdatePurchaseInvoice: SUCCESS. Invoice {InvoiceNumber} ({InvoiceId}) updated and committed by {User}.",
+                    invoice.InvoiceNumber, invoice.Id, user.UserName);
 
                 return _mapper.Map<PurchaseInvoiceDto>(invoice);
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Error updating PurchaseInvoice | InvoiceId={InvoiceId} | Rolling back transaction...",
+                _logger.LogCritical(ex, "UpdatePurchaseInvoice: CRITICAL FAILURE for Invoice {InvoiceId}. Initiating Transaction Rollback.",
                     request.Id);
 
                 await _unitOfWork.RollbackTransactionAsync(cancellationToken);

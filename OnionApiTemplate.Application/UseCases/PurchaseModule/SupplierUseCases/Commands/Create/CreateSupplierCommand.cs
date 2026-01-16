@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.PurchaseModule.SupplierUseCases.Commands.Create
 {
-    public record CreateSupplierCommand(CreateSupplierDto Dto, string CreatedBy) : IRequest<SupplierDto>;
+    public record CreateSupplierCommand(CreateSupplierDto Dto, string CurrentUserId) : IRequest<SupplierDto>;
 }

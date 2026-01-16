@@ -7,12 +7,13 @@ namespace Khazen.Application.Mappings.PurchaseModule
     {
         public PurchaseInvoiceProfile()
         {
-            CreateMap<PurchaseInvoice, PurchaseInvoiceDto>().ReverseMap();
-            CreateMap<PurchaseInvoice, PurchaseInvoiceDetailsDto>().ReverseMap();
+            CreateMap<PurchaseInvoice, PurchaseInvoiceDetailsDto>()
+             .ForMember(dest => dest.SupplierName, opt => opt.MapFrom(src => src.Supplier!.Name));
 
-            CreateMap<PurchaseInvoiceItem, PurchaseInvoiceItemDto>().ReverseMap();
+            CreateMap<PurchaseInvoiceItem, PurchaseInvoiceItemDto>();
 
-
+            CreateMap<PurchaseInvoice, PurchaseInvoiceDto>()
+                .ForMember(dest => dest.SupplierName, opt => opt.MapFrom(src => src.Supplier!.Name));
         }
     }
 }

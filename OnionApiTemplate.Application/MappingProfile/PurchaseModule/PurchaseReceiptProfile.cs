@@ -16,7 +16,6 @@ namespace Khazen.Application.MappingProfile.PurchaseModule
             CreateMap<UpdatePurchaseReceiptItemDto, PurchaseReceiptItem>();
 
             CreateMap<PurchaseReceipt, PurchaseReceiptDto>()
-             .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.Items))
              .ReverseMap();
 
             CreateMap<PurchaseReceiptItem, PurchaseReceiptItemDto>().ReverseMap();

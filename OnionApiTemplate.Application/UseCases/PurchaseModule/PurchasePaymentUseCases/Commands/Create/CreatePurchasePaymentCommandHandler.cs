@@ -68,11 +68,11 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchasePaymentUseCases.Com
                     "Calling PurchasePaymentDomainService.CreatePaymentAsync | InvoiceId={InvoiceId}",
                     invoice.Id);
 
-                var user = await _userManager.FindByNameAsync(request.CreatedBy);
+                var user = await _userManager.FindByNameAsync(request.CurrentUserId);
                 if (user is null)
                 {
-                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.CreatedBy);
-                    throw new NotFoundException<ApplicationUser>(request.CreatedBy);
+                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.CurrentUserId);
+                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
 
                 var payment = await _paymentService.CreatePaymentAsync(

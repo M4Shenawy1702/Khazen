@@ -18,7 +18,7 @@ namespace Khazen.Application.Common.Services.PurchaseModuleServices.PurchaseRece
             if (command.Dto.Items == null || command.Dto.Items.Count == 0)
                 throw new BadRequestException("Receipt must have at least one item.");
 
-            var receipt = new PurchaseReceipt(order.Id, warehouse.Id, command.CreatedBy, command.Dto.Notes);
+            var receipt = new PurchaseReceipt(order.Id, warehouse.Id, command.CurrentUserId, command.Dto.Notes);
 
             ValidateProducts(order, command.Dto);
             ValidateQuantities(order, command.Dto);

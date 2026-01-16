@@ -40,6 +40,7 @@ namespace Khazen.API.Middlewares
                 ValidationException => (int)HttpStatusCode.BadRequest,
                 ConflictException => (int)HttpStatusCode.Conflict,
                 ConcurrencyException => (int)HttpStatusCode.Conflict,
+                UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
                 _ => (int)HttpStatusCode.InternalServerError
             };
 

@@ -11,24 +11,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Khazen.Application.Common.Services
 {
-    public class JournalEntryService : IJournalEntryService
+    public class JournalEntryService(
+        IUnitOfWork unitOfWork,
+        IGetSystemValues getSystemValues,
+        INumberSequenceService numberSequenceService,
+        ILogger<JournalEntryService> logger) : IJournalEntryService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IGetSystemValues _getSystemValues;
-        private readonly INumberSequenceService _numberSequenceService;
-        private readonly ILogger<JournalEntryService> _logger;
-
-        public JournalEntryService(
-            IUnitOfWork unitOfWork,
-            IGetSystemValues getSystemValues,
-            INumberSequenceService numberSequenceService,
-            ILogger<JournalEntryService> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _getSystemValues = getSystemValues;
-            _numberSequenceService = numberSequenceService;
-            _logger = logger;
-        }
+        private readonly IUnitOfWork _unitOfWork = unitOfWork;
+        private readonly IGetSystemValues _getSystemValues = getSystemValues;
+        private readonly INumberSequenceService _numberSequenceService = numberSequenceService;
+        private readonly ILogger<JournalEntryService> _logger = logger;
 
         public async Task<JournalEntry> CreateSalaryJournalEntryAsync(
         Employee employee,
@@ -340,11 +332,11 @@ namespace Khazen.Application.Common.Services
         }
 
         public async Task<JournalEntry> CreateSalesInvoicePaymentJournalAsync(
-    SalesInvoice invoice,
-    string CreatedBy,
-    CreateSalesInvoicePaymentCommand request,
-    IEnumerable<SystemSetting> systemSettings,
-    CancellationToken cancellationToken)
+        SalesInvoice invoice,
+        string CreatedBy,
+        CreateSalesInvoicePaymentCommand request,
+        IEnumerable<SystemSetting> systemSettings,
+        CancellationToken cancellationToken)
         {
             if (request.Dto.Amount <= 0)
             {

@@ -6,6 +6,7 @@ using Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Command
 using Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Commands.Update;
 using Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Queries.GetAll;
 using Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Queries.GetById;
+using Khazen.Presentation.Attributes;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -17,9 +18,11 @@ namespace Khazen.Presentation.Controllers.PurchaseModule
     public class PurchaseInvoiceController(ISender sender) : ControllerBase
     {
         private readonly ISender _sender = sender;
-        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                                ?? throw new UnauthorizedAccessException("User identity not available.");
 
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                        ?? throw new UnauthorizedAccessException("User identity not available.");
+
+        [RedisCache(300)]
         [HttpGet]
         public async Task<ActionResult<PaginatedResult<PurchaseInvoiceDto>>> GetAll([FromQuery] PurchaseInvoiceQueryParameters queryParameters)
         {
@@ -27,6 +30,7 @@ namespace Khazen.Presentation.Controllers.PurchaseModule
             return Ok(result);
         }
 
+        [RedisCache(300)]
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<PurchaseInvoiceDto>> GetById(Guid id)
         {
@@ -35,6 +39,7 @@ namespace Khazen.Presentation.Controllers.PurchaseModule
         }
 
         [HttpPost]
+        [CacheInvalidate("/api/PurchaseInvoice")]
         public async Task<ActionResult<PurchaseInvoiceDto>> Create([FromBody] CreatePurchaseInvoiceDto dto)
         {
             var result = await _sender.Send(new CreateInvoiceForReceiptCommand(dto, CurrentUserId));
@@ -42,17 +47,20 @@ namespace Khazen.Presentation.Controllers.PurchaseModule
         }
 
         [HttpPut("{id:guid}")]
+        [CacheInvalidate("/api/PurchaseInvoice")]
         public async Task<ActionResult<PurchaseInvoiceDto>> Update(Guid id, [FromBody] UpdatePurchaseInvoiceDto dto)
         {
             var result = await _sender.Send(new UpdatePurchaseInvoiceCommand(id, dto, CurrentUserId));
             return Ok(result);
         }
 
-        [HttpPut("reverse/{id:guid}")]
-        public async Task<IActionResult> Reverse(Guid id, [FromQuery] byte[] RowVersion)
+        [HttpPatch("reverse/{id:guid}")]
+        [CacheInvalidate("/api/PurchaseInvoice")]
+        public async Task<IActionResult> Reverse(Guid id, [FromQuery] byte[] rowVersion)
         {
-            await _sender.Send(new ReversePurchaseInvoiceCommand(id, CurrentUserId, RowVersion));
+            await _sender.Send(new ReversePurchaseInvoiceCommand(id, CurrentUserId, rowVersion));
             return NoContent();
         }
     }
 }
+

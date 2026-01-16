@@ -16,7 +16,7 @@
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly ILogger<DeletePurchaseReceiptService> _logger = logger;
 
-        public async Task DeleteReceiptAsync(PurchaseReceipt receipt, string modifiedBy, byte[]? rowVersion, CancellationToken cancellationToken = default)
+        public async Task DeleteReceiptAsync(PurchaseReceipt receipt, string DeletedBy, byte[]? rowVersion, CancellationToken cancellationToken = default)
         {
             _logger.LogDebug("Setting RowVersion for PurchaseReceipt {ReceiptId}", receipt.Id);
             receipt.SetRowVersion(rowVersion);
@@ -26,7 +26,7 @@
 
             var receiptRepo = _unitOfWork.GetRepository<PurchaseReceipt, Guid>();
             _logger.LogDebug("Deleting PurchaseReceipt {ReceiptId}", receipt.Id);
-            receipt.MarkAsDeleted(modifiedBy);
+            receipt.MarkAsDeleted(DeletedBy);
             receiptRepo.Update(receipt);
         }
 

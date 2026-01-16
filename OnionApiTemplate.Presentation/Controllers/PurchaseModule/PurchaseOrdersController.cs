@@ -8,59 +8,56 @@ using Khazen.Application.UseCases.PurchaseModule.PurchaseOrderUseCases.Commands.
 using Khazen.Application.UseCases.PurchaseModule.PurchaseOrderUseCases.Queries.GetAll;
 using Khazen.Application.UseCases.PurchaseModule.PurchaseOrderUseCases.Queries.GetById;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Khazen.Presentation.Controllers.PurchaseModule
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class PurchaseOrdersController : ControllerBase
+    [Authorize]
+    public class PurchaseOrdersController(IMediator mediator) : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly IMediator _mediator = mediator;
 
-        public PurchaseOrdersController(IMediator mediator)
-        {
-            _mediator = mediator;
-        }
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                              ?? throw new UnauthorizedAccessException("User identity not available.");
 
         [HttpPost]
         public async Task<ActionResult<PurchaseOrderDto>> Create([FromBody] CreatePurchaseOrderDto dto)
         {
-            var createdBy = User.Identity!.Name;
-            if (createdBy is null) return BadRequest("User not found");
-            var result = await _mediator.Send(new CreatePurchaseOrderCommand(dto, createdBy));
+            var result = await _mediator.Send(new CreatePurchaseOrderCommand(dto, CurrentUserId));
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
         [HttpGet]
         public async Task<ActionResult<PaginatedResult<PurchaseOrderDto>>> GetAll([FromQuery] PurchaseOrdersQueryParameters queryParameters)
         {
-            var result = await _mediator.Send(new GetAllPurchaseOrdersQuery(queryParameters));
-            return Ok(result);
+            return Ok(await _mediator.Send(new GetAllPurchaseOrdersQuery(queryParameters)));
         }
 
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<PurchaseOrderDto>> GetById(Guid id)
         {
-            var result = await _mediator.Send(new GetPurchaseOrderByIdQuery(id));
-            return Ok(result);
+            return Ok(await _mediator.Send(new GetPurchaseOrderByIdQuery(id)));
         }
 
         [HttpPut("{id:guid}")]
         public async Task<ActionResult<PurchaseOrderDto>> Update(Guid id, [FromBody] UpdatePurchaseOrderDto dto)
         {
-            var createdBy = User.Identity!.Name;
-            if (createdBy is null) return BadRequest("User not found");
-            var result = await _mediator.Send(new UpdatePurchaseOrderCommand(id, dto, createdBy));
+            var result = await _mediator.Send(new UpdatePurchaseOrderCommand(id, dto, CurrentUserId));
             return Ok(result);
         }
 
         [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete(Guid id, [FromHeader] byte[] RowVersion)
+        public async Task<IActionResult> Delete(Guid id, [FromHeader(Name = "If-Match")] string rowVersionStr)
         {
-            var createdBy = User.Identity!.Name;
-            if (createdBy is null) return BadRequest("User not found");
-            await _mediator.Send(new TogglePurchaseOrderCommand(id, createdBy, RowVersion));
+            if (CurrentUserId is null) return Unauthorized();
+
+            byte[] rowVersion = Convert.FromBase64String(rowVersionStr);
+
+            await _mediator.Send(new TogglePurchaseOrderCommand(id, CurrentUserId, rowVersion));
             return NoContent();
         }
     }
