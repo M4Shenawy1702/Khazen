@@ -34,7 +34,7 @@ namespace Khazen.Application.UseCases.HRModule.PerformanceReviewUseCases.Command
             var user = await _userManager.FindByNameAsync(request.CurrentUserId);
             if (user is null)
             {
-                _logger.LogWarning("User not found: {ModifiedBy}", request.CurrentUserId);
+                _logger.LogWarning("User not found: {CurrentUserId}", request.CurrentUserId);
                 throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 

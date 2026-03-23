@@ -98,7 +98,6 @@ namespace Khazen.Application.UseCases.InventoryModule.ProductUseCases.Commands.U
                 product.ModifiedAt = DateTime.UtcNow;
                 product.ModifiedBy = user.Id;
 
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
                 _logger.LogInformation("UpdateProduct: Database changes committed for {Id}.", request.Id);

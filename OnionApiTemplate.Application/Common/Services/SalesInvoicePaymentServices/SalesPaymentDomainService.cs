@@ -1,6 +1,5 @@
 ﻿using Khazen.Application.Common.Interfaces.ISalesModule.ISalesInvoicePaymentServices;
-using Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Commands.Create;
-using Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Commands.Delete;
+using Khazen.Application.DOTs.SalesModule.SalesOrderPaymentDtos;
 using Khazen.Domain.Entities;
 using Khazen.Domain.Entities.SalesModule;
 using Khazen.Domain.Exceptions;
@@ -45,37 +44,21 @@ namespace Khazen.Application.Common.Services.SalesInvoicePaymentServices
             );
         }
 
-        public SalesInvoicePayment CreatePayment(SalesInvoice salesInvoice, CreateSalesInvoicePaymentCommand command)
+        public SalesInvoicePayment CreatePayment(SalesInvoice salesInvoice, CreateSalesInvoicePaymentDto Dto, string userId)
         {
             return new SalesInvoicePayment
             {
                 Id = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = command.CreatedBy ?? "System",
+                CreatedBy = userId,
                 SalesInvoiceId = salesInvoice.Id,
-                Amount = command.Dto.Amount,
+                Amount = Dto.Amount,
                 PaymentDate = DateTime.UtcNow,
-                Method = command.Dto.Method,
+                Method = Dto.Method,
                 SafeTransactions = new List<SafeTransaction>(),
-                Notes = command.Dto.Notes
+                Notes = Dto.Notes
             };
         }
-        public void ReversePayment(DeleteSalesInvoicePaymentCommand request, SalesInvoicePayment payment)
-        {
-            if (request.RowVersion != null)
-                payment.AssertRowVersion(request.RowVersion);
-            else
-            {
-                _logger.LogWarning("RowVersion not provided for payment {Id}", request.Id);
-                throw new BadRequestException("RowVersion not provided.");
-            }
-            if (payment.IsReversed)
-            {
-                _logger.LogWarning("Attempt to reverse an already reversed payment {Id}", request.Id);
-                throw new BadRequestException("Payment is already reversed/deleted.");
-            }
 
-            payment.Reverse();
-        }
     }
 }

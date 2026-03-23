@@ -65,7 +65,7 @@ namespace Khazen.Application.Common.Services
                 CreatedAt = DateTime.UtcNow,
                 SourceId = payment.Id,
                 JournalEntryId = journalEntry.Id,
-                CreatedBy = request.CreatedBy,
+                CreatedBy = request.CurrentUserId,
                 SourceType = TransactionSourceType.SalesInvoicePayment
             };
 
@@ -79,7 +79,7 @@ namespace Khazen.Application.Common.Services
                 "Sales payment applied successfully. SafeId: {SafeId}, New Balance: {Balance}, PaymentId: {PaymentId}",
                 safeId, safe.Balance, payment.Id);
         }
-        public async Task SalesPaymentSafeReversal(DeleteSalesInvoicePaymentCommand request, SalesInvoicePayment payment, JournalEntry reversalJournal, IGenericRepository<Safe, Guid> safeRepo, CancellationToken cancellationToken)
+        public async Task SalesPaymentSafeReversal(ReverseSalesInvoicePaymentCommand request, SalesInvoicePayment payment, JournalEntry reversalJournal, IGenericRepository<Safe, Guid> safeRepo, CancellationToken cancellationToken)
         {
             foreach (var oldSafeTx in payment.SafeTransactions.ToList())
             {

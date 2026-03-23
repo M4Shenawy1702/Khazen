@@ -10,6 +10,6 @@
         public string Reason { get; set; } = string.Empty;
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime? ModifiedAt { get; set; }
-        public string? ModifiedBy { get; set; }
+        public string? CurrentUserId { get; set; }
     }
 }

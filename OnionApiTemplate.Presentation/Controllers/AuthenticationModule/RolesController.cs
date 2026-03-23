@@ -6,16 +6,21 @@ using Khazen.Application.UseCases.AuthService.RolesModule.Commands.UpdateRole;
 using Khazen.Application.UseCases.AuthService.RolesModule.Queries.GetAllRoles;
 using Khazen.Application.UseCases.AuthService.RolesModule.Queries.GetRoleById;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Khazen.Presentation.Controllers.AuthenticationModule
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize(Roles = "SuperAdmin,Admin")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     public class RolesController(ISender sender) : ControllerBase
     {
         private readonly ISender _sender = sender;
+
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                               ?? throw new UnauthorizedAccessException("User identity not available.");
 
         [HttpPost("create")]
         public async Task<IActionResult> CreateRole([FromBody] CreateRoleCommand command)
@@ -27,10 +32,7 @@ namespace Khazen.Presentation.Controllers.AuthenticationModule
         [HttpDelete("{roleId}")]
         public async Task<IActionResult> DeleteRole(string roleId)
         {
-            var userName = User.Identity?.Name;
-            if (userName == null)
-                return BadRequest("User not found");
-            var result = await _sender.Send(new ToggleRoleCommand(roleId, userName));
+            var result = await _sender.Send(new ToggleRoleCommand(roleId, CurrentUserId));
             return Ok(result);
         }
 

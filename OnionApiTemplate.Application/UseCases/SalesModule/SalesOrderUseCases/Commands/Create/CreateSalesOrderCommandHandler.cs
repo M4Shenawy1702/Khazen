@@ -40,11 +40,11 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.Cr
                 throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
             }
 
-            var user = await _userManager.FindByNameAsync(request.CreatedBy);
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
             if (user is null)
             {
-                _logger.LogInformation("User not found. UserName: {CreatedBy}", request.CreatedBy);
-                throw new NotFoundException<ApplicationUser>(request.CreatedBy);
+                _logger.LogInformation("User not found. UserName: {CurrentUserId}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 
             if (!request.Dto.SalesOrderItems.Any())
@@ -79,7 +79,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.Cr
                    customer,
                    request.Dto,
                    warehouseProducts,
-                   request.CreatedBy
+                   user.Id
                );
 
                 var orderRepo = _unitOfWork.GetRepository<SalesOrder, Guid>();

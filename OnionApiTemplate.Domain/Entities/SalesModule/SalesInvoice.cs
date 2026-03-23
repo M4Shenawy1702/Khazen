@@ -1,6 +1,7 @@
 ﻿using Khazen.Domain.Common.Enums;
 using Khazen.Domain.Entities.AccountingModule;
 using Khazen.Domain.Exceptions;
+using System.ComponentModel.DataAnnotations;
 
 namespace Khazen.Domain.Entities.SalesModule
 {
@@ -40,6 +41,19 @@ namespace Khazen.Domain.Entities.SalesModule
         public bool IsVoided { get; private set; }
         public DateTime? VoidedAt { get; private set; }
 
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
+        public void AssertRowVersion(byte[]? requestVersion)
+        {
+            if (requestVersion is null)
+                throw new ConcurrencyException("RowVersion is missing.");
+
+            if (RowVersion is null)
+                throw new ConcurrencyException("Entity RowVersion is missing.");
+
+            if (!RowVersion.SequenceEqual(requestVersion))
+                throw new ConcurrencyException("Order was modified by another user.");
+        }
         public void Modify(DateTime invoiceDate, string? notes, Guid customerId, string modifiedBy)
         {
             InvoiceDate = invoiceDate;

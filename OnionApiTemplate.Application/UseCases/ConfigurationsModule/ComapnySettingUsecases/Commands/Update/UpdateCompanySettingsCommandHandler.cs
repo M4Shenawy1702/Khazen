@@ -31,11 +31,11 @@ namespace Khazen.Application.UseCases.ConfigurationsModule.ComapnySettingUsecase
                 throw new BadRequestException(errors);
             }
 
-            var updaterUser = await _userManager.FindByNameAsync(request.ModifiedBy);
-            if (updaterUser == null)
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            if (user == null)
             {
-                _logger.LogWarning("Settings update failed: Updater user '{Username}' not found.", request.ModifiedBy);
-                throw new NotFoundException($"Updater user '{request.ModifiedBy}' not found.");
+                _logger.LogWarning("Settings update failed: Updater user '{Username}' not found.", request.CurrentUserId);
+                throw new NotFoundException($"Updater user '{request.CurrentUserId}' not found.");
             }
 
             var companyRepository = _unitOfWork.GetRepository<CompanySetting, int>();
@@ -51,13 +51,13 @@ namespace Khazen.Application.UseCases.ConfigurationsModule.ComapnySettingUsecase
 
             _mapper.Map(request.Dto, companySetting);
 
-            companySetting.ModifiedBy = updaterUser.Id;
+            companySetting.CreatedBy = user.Id;
             companySetting.ModifiedAt = DateTime.UtcNow;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("CompanySetting ID {SettingId} updated successfully by User ID: {UserId}.",
-                companySetting.Id, updaterUser.Id);
+                companySetting.Id, user.Id);
 
             return _mapper.Map<CompanySettingDto>(companySetting);
         }

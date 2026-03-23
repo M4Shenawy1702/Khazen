@@ -76,16 +76,16 @@ namespace Khazen.Application.Common.Services.SalesOrderServices
             UpdateSalesOrderDto dto,
             SalesOrder salesOrder,
             IEnumerable<WarehouseProduct> warehouseProducts,
-            string modifiedBy)
+            string CurrentUserId)
         {
-            _logger.LogInformation("Updating Sales Order {OrderId} by {User}", salesOrder.Id, modifiedBy);
+            _logger.LogInformation("Updating Sales Order {OrderId} by {User}", salesOrder.Id, CurrentUserId);
 
             salesOrder.CustomerId = customer.Id;
             salesOrder.CustomerNameSnapshot = $"{customer.Name}-{customer.Address}";
             salesOrder.EstimatedShipDate = dto.EstimatedShipDate;
             salesOrder.DiscountType = dto.DiscountType;
             salesOrder.DiscountValue = dto.DiscountValue;
-            salesOrder.ModifiedBy = modifiedBy;
+            salesOrder.ModifiedBy = CurrentUserId;
             salesOrder.ModifiedAt = DateTime.UtcNow;
 
             var existingItems = salesOrder.Items.ToList();

@@ -14,14 +14,16 @@ public class UpdateSalesOrderCommandValidator : AbstractValidator<UpdateSalesOrd
         RuleFor(x => x.Dto.CustomerId)
             .NotEmpty().WithMessage("Customer Id is required.");
 
-        RuleFor(x => x.ModifiedBy)
-            .NotEmpty().WithMessage("ModifiedBy is required.");
+        RuleFor(x => x.CurrentUserId)
+            .NotEmpty().WithMessage("CurrentUserId is required.");
 
-        RuleFor(x => x.RowVersion)
-            .NotEmpty().WithMessage("RowVersion is required.");
+
 
         RuleFor(x => x.Dto.SalesOrderItems)
            .NotEmpty().WithMessage("Order must contain at least one item.");
+
+        RuleFor(x => x.Dto.RowVersion)
+        .NotEmpty().WithMessage("RowVersion is required.");
 
         RuleForEach(x => x.Dto.SalesOrderItems)
            .ChildRules(items =>

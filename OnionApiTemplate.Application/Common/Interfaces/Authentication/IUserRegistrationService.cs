@@ -1,7 +1,9 @@
-﻿namespace Khazen.Application.Common.Interfaces.Authentication
+﻿using Khazen.Application.DOTs.SalesModule.Customer;
+
+namespace Khazen.Application.Common.Interfaces.Authentication
 {
     internal interface IUserRegistrationService
     {
-        Task<string> RegisterCustomerUserAsync(string userName, string email, string phoneNumber, string fullName, string address, string password, CancellationToken cancellationToken = default);
+        Task<string> RegisterCustomerUserAsync(CreateCustomerDto Dto, string CurrentUserId, CancellationToken cancellationToken = default);
     }
 }

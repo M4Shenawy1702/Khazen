@@ -17,7 +17,7 @@ namespace Khazen.Application.Common.Interfaces.ISalesModule
                                         IEnumerable<SystemSetting> systemSettings,
                                         CancellationToken cancellationToken);
 
-        Task SalesPaymentSafeReversal(DeleteSalesInvoicePaymentCommand request,
+        Task SalesPaymentSafeReversal(ReverseSalesInvoicePaymentCommand request,
                                       SalesInvoicePayment payment,
                                       JournalEntry reversalJournal,
                                       IGenericRepository<Safe, Guid> safeRepo,

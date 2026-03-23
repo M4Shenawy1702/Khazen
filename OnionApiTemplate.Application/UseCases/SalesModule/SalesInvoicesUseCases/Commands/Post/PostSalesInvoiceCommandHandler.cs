@@ -25,7 +25,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
 
         public async Task<SalesInvoiceDetailsDto> Handle(PostSalesInvoiceCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting PostSalesInvoice. InvoiceId: {InvoiceId}, PostedBy: {User}", request.Id, request.PostedBy);
+            _logger.LogInformation("Starting PostSalesInvoice. InvoiceId: {InvoiceId}, CurrentUserId: {User}", request.Id, request.CurrentUserId);
 
             var validationResult = await _validator.ValidateAsync(request, cancellationToken);
             if (!validationResult.IsValid)
@@ -34,11 +34,11 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
                 throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
             }
 
-            var user = await _userManager.FindByNameAsync(request.PostedBy);
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
             if (user is null)
             {
-                _logger.LogWarning("User not found while posting sales invoice. UserName: {UserName}", request.PostedBy);
-                throw new NotFoundException<ApplicationUser>(request.PostedBy);
+                _logger.LogWarning("User not found while posting sales invoice. UserName: {UserName}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -69,8 +69,8 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
                 _logger.LogInformation("Generating journal entry for invoice {InvoiceId}", salesInvoice.Id);
                 await _journalEntryService.CreateSalesInvoiceJournalAsync(salesInvoice, user.UserName!, cancellationToken);
 
-                _logger.LogDebug("Marking invoice {InvoiceId} as posted by {User}", salesInvoice.Id, request.PostedBy);
-                salesInvoice.MarkAsPosted(request.PostedBy);
+                _logger.LogDebug("Marking invoice {InvoiceId} as posted by {User}", salesInvoice.Id, request.CurrentUserId);
+                salesInvoice.MarkAsPosted(user.Id);
 
                 _logger.LogDebug("Calculating totals and updating invoice status for {InvoiceId}", salesInvoice.Id);
                 salesInvoice.CalculateTotals();
@@ -79,7 +79,6 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
                 invoiceRepo.Update(salesInvoice);
 
                 _logger.LogInformation("Saving changes and committing transaction for invoice {InvoiceId}", salesInvoice.Id);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
                 _logger.LogInformation("Invoice {InvoiceId} posted successfully.", salesInvoice.Id);

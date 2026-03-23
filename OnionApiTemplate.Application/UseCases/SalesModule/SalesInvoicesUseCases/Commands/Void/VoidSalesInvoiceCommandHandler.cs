@@ -34,8 +34,15 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
                 var invoiceRepo = _unitOfWork.GetRepository<SalesInvoice, Guid>();
                 var journalRepo = _unitOfWork.GetRepository<JournalEntry, Guid>();
 
-                var salesInvoice = await invoiceRepo.GetAsync(new GetSalesInvoiceWithIncludesSpecifications(request.Id), cancellationToken)
-                     ?? throw new NotFoundException<SalesInvoice>(request.Id);
+                var salesInvoice = await invoiceRepo.GetAsync(new GetSalesInvoiceWithIncludesSpecifications(request.Id), cancellationToken);
+
+                if (salesInvoice is null)
+                {
+                    _logger.LogInformation("Sales Invoice not found. Id: {Id}", request.Id);
+                    throw new NotFoundException<SalesInvoice>(request.Id);
+                }
+
+                salesInvoice.AssertRowVersion(request.RowVersion);
 
                 if (salesInvoice.IsVoided)
                     throw new BadRequestException("Invoice is already voided.");
@@ -44,13 +51,29 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
                     throw new BadRequestException("Cannot void invoice with associated payments or credit notes.");
 
 
-                var journalEntry = await journalRepo.GetAsync(new GetJurnalEntryByIdWithIncludesSpecification(salesInvoice.JournalEntryId), cancellationToken)
-                    ?? throw new NotFoundException<JournalEntry>(salesInvoice.JournalEntryId);
+                var journalEntry = await journalRepo.GetAsync(new GetJurnalEntryByIdWithIncludesSpecification(salesInvoice.JournalEntryId), cancellationToken);
+
+                if (journalEntry is null)
+
+                {
+                    _logger.LogInformation(
+                        "Journal entry not found for Sales Invoice {InvoiceNumber}",
+                        salesInvoice.InvoiceNumber
+                    );
+                    throw new NotFoundException<JournalEntry>(salesInvoice.JournalEntryId);
+                }
+
 
                 if (journalEntry == null)
+                {
+                    _logger.LogInformation(
+                        "Journal entry not found for Sales Invoice {InvoiceNumber}",
+                        salesInvoice.InvoiceNumber
+                    );
                     throw new BadRequestException("Original journal entry is missing.");
+                }
 
-                var reversalEntry = journalEntry.CreateReversal(user.UserName!, $"Reversed JE for JE-Number : {journalEntry.JournalEntryNumber}");
+                var reversalEntry = journalEntry.CreateReversal(user.Id, $"Reversed JE for JE-Number : {journalEntry.JournalEntryNumber}");
 
                 reversalEntry.JournalEntryNumber = await _numberSequenceService.GetNextNumber(
                     "JE",
@@ -67,11 +90,16 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
 
                 await journalRepo.AddAsync(reversalEntry, cancellationToken);
 
-                salesInvoice.Void(user.UserName!);
+                salesInvoice.Void(user.Id);
 
                 invoiceRepo.Update(salesInvoice);
 
-                await _unitOfWork.SaveChangesAsync();
+                _logger.LogInformation(
+                    "Sales Invoice {InvoiceNumber} voided by user {UserId}",
+                    salesInvoice.InvoiceNumber,
+                    user.Id
+                );
+
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
                 return true;

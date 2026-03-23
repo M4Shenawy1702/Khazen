@@ -34,11 +34,11 @@ namespace Khazen.Application.UseCases.AccountingModule.AccountUseCases.Commands.
                     _logger.LogWarning("UpdateAccountByIdCommandHandler validation failed for account with {AccountId}", request.Id);
                     throw new BadRequestException(validatorResult.Errors.Select(x => x.ErrorMessage).ToList());
                 }
-                var user = await _userManager.FindByNameAsync(request.ModifiedBy);
+                var user = await _userManager.FindByNameAsync(request.CurrentUserId);
                 if (user is null)
                 {
-                    _logger.LogInformation("User not found. Username: {ModifiedBy}", request.ModifiedBy);
-                    throw new NotFoundException<ApplicationUser>(request.ModifiedBy);
+                    _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
+                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
 
                 var accountRepository = _unitOfWork.GetRepository<Account, Guid>();
@@ -48,6 +48,9 @@ namespace Khazen.Application.UseCases.AccountingModule.AccountUseCases.Commands.
                     _logger.LogError("Account with {AccountId} not found", request.Id);
                     throw new NotFoundException<Account>(request.Id);
                 }
+
+                account.AssertRowVersion(request.RowVersion);
+
                 if (request.Dto.ParentId != null && request.Dto.ParentId != account.ParentId)
                 {
                     var parentAccount = await accountRepository.GetAsync(new GetAccountByIdSpecification((Guid)request.Dto.ParentId), cancellationToken);
@@ -59,7 +62,7 @@ namespace Khazen.Application.UseCases.AccountingModule.AccountUseCases.Commands.
                 }
                 await EnsureNoDuplicatesAsync(request, accountRepository, cancellationToken);
 
-                account.Modify(request.Dto.Name, request.Dto.Code, request.Dto.Description, request.Dto.AccountType, request.ModifiedBy, request.Dto.ParentId);
+                account.Modify(request.Dto.Name, request.Dto.Code, request.Dto.Description, request.Dto.AccountType, user.Id, request.Dto.ParentId);
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 _logger.LogInformation("Successfully updated account with {AccountId}", request.Id);

@@ -10,7 +10,7 @@ namespace Khazen.Application.DOTs.PurchaseModule.PurchaseInvoiceDtos
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? ModifiedAt { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
-        public string? ModifiedBy { get; set; }
+        public string? CurrentUserId { get; set; }
         public Guid SupplierId { get; set; }
         public string SupplierName { get; set; }
 

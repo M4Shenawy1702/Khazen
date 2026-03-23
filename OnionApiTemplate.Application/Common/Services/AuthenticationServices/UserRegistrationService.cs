@@ -1,4 +1,5 @@
 ﻿using Khazen.Application.Common.Interfaces.Authentication;
+using Khazen.Application.DOTs.SalesModule.Customer;
 using Khazen.Domain.Common.Consts;
 using Khazen.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -16,20 +17,13 @@ namespace Khazen.Application.Common.Services.AuthenticationServices
         private readonly RoleManager<ApplicationRole> _roleManager = roleManager;
         private readonly ILogger<UserRegistrationService> _logger = logger;
 
-        public async Task<string> RegisterCustomerUserAsync(
-            string userName,
-            string email,
-            string phoneNumber,
-            string fullName,
-            string address,
-            string password,
-            CancellationToken cancellationToken = default)
+        public async Task<string> RegisterCustomerUserAsync(CreateCustomerDto Dto, string CurrentUserId, CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Starting registration for username: {UserName}, email: {Email}", userName, email);
+            _logger.LogInformation("Starting registration for username: {UserName}, email: {Email}", Dto.UserName, Dto.Email);
 
-            var emailTask = _userManager.FindByEmailAsync(email);
-            var usernameTask = _userManager.FindByNameAsync(userName);
-            var phoneTask = _userManager.Users.AnyAsync(u => u.PhoneNumber == phoneNumber, cancellationToken);
+            var emailTask = _userManager.FindByEmailAsync(Dto.Email);
+            var usernameTask = _userManager.FindByNameAsync(Dto.UserName);
+            var phoneTask = _userManager.Users.AnyAsync(u => u.PhoneNumber == Dto.PhoneNumber, cancellationToken);
 
             await Task.WhenAll(emailTask, usernameTask, phoneTask);
 
@@ -38,19 +32,19 @@ namespace Khazen.Application.Common.Services.AuthenticationServices
             if (emailTask.Result is not null)
             {
                 duplicateErrors.Add("Email is already in use.");
-                _logger.LogWarning("Duplicate email detected: {Email}", email);
+                _logger.LogWarning("Duplicate email detected: {Email}", Dto.Email);
             }
 
             if (usernameTask.Result is not null)
             {
                 duplicateErrors.Add("Username is already in use.");
-                _logger.LogWarning("Duplicate username detected: {UserName}", userName);
+                _logger.LogWarning("Duplicate username detected: {UserName}", Dto.UserName);
             }
 
             if (phoneTask.Result)
             {
                 duplicateErrors.Add("Phone number is already in use.");
-                _logger.LogWarning("Duplicate phone number detected: {Phone}", phoneNumber);
+                _logger.LogWarning("Duplicate phone number detected: {Phone}", Dto.PhoneNumber);
             }
 
             if (duplicateErrors.Count > 0)
@@ -58,17 +52,18 @@ namespace Khazen.Application.Common.Services.AuthenticationServices
 
             var user = new ApplicationUser
             {
-                UserName = userName,
-                Email = email,
-                PhoneNumber = phoneNumber,
-                FullName = fullName,
-                Address = address,
-                UserType = UserType.Customer
+                UserName = Dto.UserName,
+                Email = Dto.Email,
+                PhoneNumber = Dto.PhoneNumber,
+                FullName = Dto.Name,
+                Address = Dto.Address,
+                UserType = UserType.Customer,
+                CreatedBy = CurrentUserId
             };
 
             _logger.LogInformation("Creating identity user: {UserName}", user.UserName);
 
-            var createResult = await _userManager.CreateAsync(user, password);
+            var createResult = await _userManager.CreateAsync(user, Dto.Password);
             if (!createResult.Succeeded)
             {
                 _logger.LogError("User creation failed: {@Errors}", createResult.Errors);

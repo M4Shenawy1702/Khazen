@@ -16,7 +16,7 @@ namespace Khazen.Application.Validations.SalesModule.SalesOrderValidations
                 .Must(v => v.Length > 0)
                 .WithMessage("RowVersion cannot be empty.");
 
-            RuleFor(x => x.CanceledBy)
+            RuleFor(x => x.CurrentUserId)
                 .NotEmpty()
                 .WithMessage("CanceledBy is required.")
                 .MaximumLength(100)

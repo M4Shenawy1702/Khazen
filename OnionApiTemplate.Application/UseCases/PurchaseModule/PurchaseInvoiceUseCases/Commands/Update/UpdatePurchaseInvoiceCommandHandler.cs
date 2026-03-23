@@ -74,7 +74,7 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseInvoiceUseCases.Com
 
             try
             {
-                _logger.LogDebug("UpdatePurchaseInvoice: Applying modifications to Invoice {InvoiceNumber}. ModifiedBy: {UserName}",
+                _logger.LogDebug("UpdatePurchaseInvoice: Applying modifications to Invoice {InvoiceNumber}. CurrentUserId: {UserName}",
                     invoice.InvoiceNumber, user.UserName);
 
                 invoice.Modify(request.Dto.InvoiceNumber, user.Id, request.Dto.Notes);

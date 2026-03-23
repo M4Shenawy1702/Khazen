@@ -35,6 +35,8 @@ namespace Khazen.Domain.Entities.SalesModule
         public DateTime? ShippedAt { get; private set; }
         public string? DeliveredBy { get; private set; }
         public DateTime? DeliveredAt { get; private set; }
+        public string? ConfirmedBy { get; private set; }
+        public DateTime? ConfirmedAt { get; private set; }
 
         public ICollection<SalesOrderItem> Items { get; set; } = [];
         public Guid? InvoiceId { get; set; }
@@ -66,7 +68,6 @@ namespace Khazen.Domain.Entities.SalesModule
 
             wp.ReservedQuantity += quantity;
         }
-
         public void CalculateTotals()
         {
             SubTotalAmount = Items.Sum(i => i.SubTotal);
@@ -86,12 +87,14 @@ namespace Khazen.Domain.Entities.SalesModule
         private decimal CalculateGrandTotal() =>
             SubTotalAmount - DiscountAmount + TaxAmount;
 
-        public void MarkAsConfirmed()
+        public void MarkAsConfirmed(string confirmedBy)
         {
             if (Status != OrderStatus.Pending)
                 throw new InvalidOperationException("Only pending orders can be confirmed.");
             CalculateTotals();
             Status = OrderStatus.Confirmed;
+            ConfirmedBy = confirmedBy;
+            ConfirmedAt = DateTime.UtcNow;
         }
 
         public void MarkAsShipped(string shippedBy, string? trackingNumber = null)

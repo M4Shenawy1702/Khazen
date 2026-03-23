@@ -6,6 +6,7 @@ using Khazen.Application.UseCases.InventoryModule.WarehouseUseCases.Queries.GetA
 using Khazen.Application.UseCases.InventoryModule.WarehouseUseCases.Queries.GetById;
 using Khazen.Presentation.Attributes;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -13,10 +14,9 @@ namespace Khazen.Presentation.Controllers.InventoryModule
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class WarehouseController(ISender sender) : ControllerBase
     {
-        private readonly ISender _sender = sender;
-
         private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                                         ?? throw new UnauthorizedAccessException("User identity not available.");
 
@@ -24,39 +24,40 @@ namespace Khazen.Presentation.Controllers.InventoryModule
         [CacheInvalidate("/api/Warehouse")]
         public async Task<ActionResult<WarehouseDto>> Create([FromBody] CreateWarehouseDto dto)
         {
-            var result = await _sender.Send(new CreateWarehouseCommand(dto, CurrentUserId));
+            var result = await sender.Send(new CreateWarehouseCommand(dto, CurrentUserId));
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
-        [RedisCache(600)]
         [HttpGet]
+        [RedisCache(600)]
         public async Task<ActionResult<IEnumerable<WarehouseDto>>> GetAll()
         {
-            var result = await _sender.Send(new GetAllWarehousesQuery());
+            var result = await sender.Send(new GetAllWarehousesQuery());
             return Ok(result);
         }
 
-        [RedisCache(600)]
         [HttpGet("{id:guid}")]
+        [RedisCache(600)]
         public async Task<ActionResult<WarehouseDto>> GetById(Guid id)
         {
-            var result = await _sender.Send(new GetWarehouseByIdQuery(id));
-            return Ok(result);
+            var result = await sender.Send(new GetWarehouseByIdQuery(id));
+            return result is null ? NotFound() : Ok(result);
         }
 
         [HttpPut("{id:guid}")]
         [CacheInvalidate("/api/Warehouse")]
+        [CacheInvalidate("/api/Product")]
         public async Task<ActionResult<WarehouseDto>> Update(Guid id, [FromBody] UpdateWarehouseDto dto)
         {
-            var result = await _sender.Send(new UpdateWarehouseCommand(id, dto, CurrentUserId));
+            var result = await sender.Send(new UpdateWarehouseCommand(id, dto, CurrentUserId));
             return Ok(result);
         }
 
-        [HttpPatch("Toggle/{id:guid}")]
+        [HttpPatch("toggle/{id:guid}")]
         [CacheInvalidate("/api/Warehouse")]
         public async Task<IActionResult> Toggle(Guid id)
         {
-            await _sender.Send(new ToggleWarehouseCommand(id, CurrentUserId));
+            await sender.Send(new ToggleWarehouseCommand(id, CurrentUserId));
             return NoContent();
         }
     }

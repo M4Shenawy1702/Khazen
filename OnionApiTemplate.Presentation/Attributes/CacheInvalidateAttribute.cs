@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Khazen.Presentation.Attributes
 {
-    [AttributeUsage(AttributeTargets.Method)]
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public class CacheInvalidateAttribute(string pattern) : Attribute, IAsyncActionFilter
     {
         private readonly string _pattern = pattern;

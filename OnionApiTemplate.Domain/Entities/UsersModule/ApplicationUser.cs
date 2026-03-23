@@ -12,6 +12,11 @@ namespace Khazen.Domain.Entities.UsersModule
         public string Address { get; set; } = string.Empty;
         public Gender Gender { get; set; }
 
+        public string CreatedBy { get; set; } = null!;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string? UpdatedBy { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+
         public bool IsActive { get; set; } = true;
         public DateTime? LastLoginAt { get; set; }
         public string? PhoneOtpCode { get; set; }

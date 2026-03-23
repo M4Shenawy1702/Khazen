@@ -7,7 +7,7 @@ namespace Khazen.Application.Validations.SalesModule.SalesInvoiceValidations
         public PostSalesInvoiceCommandValidator()
         {
             RuleFor(x => x.Id).NotEmpty().WithMessage("SalesOrderId is required.");
-            RuleFor(x => x.PostedBy).NotEmpty().WithMessage("PostedBy is required.");
+            RuleFor(x => x.CurrentUserId).NotEmpty().WithMessage("PostedBy is required.");
         }
     }
 }

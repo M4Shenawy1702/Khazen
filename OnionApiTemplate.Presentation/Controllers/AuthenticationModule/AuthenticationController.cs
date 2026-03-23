@@ -24,7 +24,8 @@ namespace Khazen.Presentation.Controllers.AuthenticationModule
     public class AuthenticationController(ISender _mediator)
         : ControllerBase
     {
-
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                               ?? throw new UnauthorizedAccessException("User identity not available.");
         [HttpPost("login")]
         public async Task<ActionResult<AuthResponse>> Login([FromForm] LoginRequestDto Dto)
         {
@@ -63,11 +64,7 @@ namespace Khazen.Presentation.Controllers.AuthenticationModule
             [FromBody] ChangePasswordDto Dto,
             [FromHeader(Name = "If-Match")] string rowVersionBase64)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null)
-                return Unauthorized("User ID claim missing.");
-
-            var result = await _mediator.Send(new ChangePasswordCommand(userId, Dto, rowVersionBase64));
+            var result = await _mediator.Send(new ChangePasswordCommand(CurrentUserId, Dto, rowVersionBase64));
 
             return Ok(result);
         }

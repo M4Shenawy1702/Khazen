@@ -42,11 +42,11 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Co
                 throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
             }
 
-            var user = await _userManager.FindByNameAsync(request.CreatedBy);
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
             if (user is null)
             {
-                _logger.LogInformation("User not found. Username: {CreatedBy}", request.CreatedBy);
-                throw new NotFoundException<ApplicationUser>(request.CreatedBy);
+                _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -57,7 +57,12 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Co
                 var invoice = await invoiceRepo.GetAsync(
                     new GetSalesInvoiceWithIncludesSpecifications(request.Dto.SalesInvoiceId),
                     cancellationToken
-                ) ?? throw new NotFoundException<SalesInvoice>(request.Dto.SalesInvoiceId);
+                );
+                if (invoice is null)
+                {
+                    _logger.LogInformation("Invoice not found. InvoiceId: {InvoiceId}", request.Dto.SalesInvoiceId);
+                    throw new NotFoundException<SalesInvoice>(request.Dto.SalesInvoiceId);
+                }
 
                 _logger.LogInformation("Retrieved invoice {InvoiceNumber} for payment", invoice.InvoiceNumber);
 
@@ -67,7 +72,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Co
 
                 _paymentDomainService.ValidatePaymentAmount(request.Dto.Amount, invoice);
 
-                var payment = _paymentDomainService.CreatePayment(invoice, request);
+                var payment = _paymentDomainService.CreatePayment(invoice, request.Dto, user.Id);
 
                 _logger.LogInformation("Created payment object with Id: {PaymentId}", payment.Id);
 

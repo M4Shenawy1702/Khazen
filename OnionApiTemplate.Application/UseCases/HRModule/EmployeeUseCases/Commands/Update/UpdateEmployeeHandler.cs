@@ -24,7 +24,7 @@ namespace Khazen.Application.UseCases.HRModule.EmployeeUsecases.Commands.Update
 
         public async Task<EmployeeDetailsDto> Handle(UpdateEmployeeCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Starting UpdateEmployeeHandler for EmployeeId: {EmployeeId}, ModifiedBy: {ModifiedBy}",
+            _logger.LogDebug("Starting UpdateEmployeeHandler for EmployeeId: {EmployeeId}, CurrentUserId: {CurrentUserId}",
                 request.Id, request.CurrentUserId);
 
             var validationResult = await _validator.ValidateAsync(request, cancellationToken);
@@ -38,7 +38,7 @@ namespace Khazen.Application.UseCases.HRModule.EmployeeUsecases.Commands.Update
             var user = await _userManager.FindByNameAsync(request.CurrentUserId);
             if (user == null)
             {
-                _logger.LogWarning("User not found: {ModifiedBy}", request.CurrentUserId);
+                _logger.LogWarning("User not found: {CurrentUserId}", request.CurrentUserId);
                 throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 
@@ -67,7 +67,7 @@ namespace Khazen.Application.UseCases.HRModule.EmployeeUsecases.Commands.Update
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                _logger.LogInformation("Employee updated successfully. EmployeeId: {EmployeeId}, ModifiedBy: {ModifiedBy}",
+                _logger.LogInformation("Employee updated successfully. EmployeeId: {EmployeeId}, CurrentUserId: {CurrentUserId}",
                     employee.Id, request.CurrentUserId);
 
                 return _mapper.Map<EmployeeDetailsDto>(employee);

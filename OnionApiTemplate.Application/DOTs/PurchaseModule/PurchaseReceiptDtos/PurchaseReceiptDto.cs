@@ -5,7 +5,7 @@
         public Guid Id { get; set; }
         public bool IsDeleted { get; set; }
         public DateTime? ModifiedAt { get; set; }
-        public string? ModifiedBy { get; set; }
+        public string? CurrentUserId { get; set; }
         public string ReceiptNumber { get; set; }
         public DateTime ReceiptDate { get; set; }
         public string? Notes { get; set; }

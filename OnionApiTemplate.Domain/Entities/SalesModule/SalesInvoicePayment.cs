@@ -23,6 +23,8 @@ namespace Khazen.Domain.Entities.SalesModule
         public Guid? ReversalJournalEntryId { get; set; }
         public JournalEntry? ReversalJournalEntry { get; set; }
 
+        public string? ReversedBy { get; private set; }
+        public DateTime? ReversedAt { get; private set; }
         public bool IsReversed { get; private set; }
 
         [Timestamp]
@@ -38,10 +40,12 @@ namespace Khazen.Domain.Entities.SalesModule
             if (!RowVersion.SequenceEqual(requestVersion))
                 throw new ConcurrencyException("Order was modified by another user.");
         }
-        public void Reverse()
+        public void Reverse(string reversedBy)
         {
             if (IsReversed) throw new BadRequestException("Payment already reversed.");
             IsReversed = true;
+            ReversedBy = reversedBy;
+            ReversedAt = DateTime.UtcNow;
         }
     }
 }

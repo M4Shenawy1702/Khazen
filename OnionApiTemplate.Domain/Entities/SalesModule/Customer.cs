@@ -38,11 +38,14 @@ namespace Khazen.Domain.Entities.SalesModule
         public decimal TotalPaid => Invoices.Sum(i => i.TotalPaid);
         public decimal OutstandingBalance => TotalInvoiced - TotalPaid;
 
-        public void Toggle(string modifiedBy)
+        public string? ToggledBy { get; set; }
+        public DateTime? ToggledAt { get; set; }
+
+        public void Toggle(string toggledBy)
         {
             IsDeleted = !IsDeleted;
-            ModifiedBy = modifiedBy;
-            ModifiedAt = DateTime.UtcNow;
+            ToggledBy = toggledBy;
+            ToggledAt = DateTime.UtcNow;
         }
     }
 }

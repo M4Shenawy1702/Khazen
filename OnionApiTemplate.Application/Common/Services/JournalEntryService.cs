@@ -368,7 +368,7 @@ namespace Khazen.Application.Common.Services
                     createdBy: CreatedBy
            )
             {
-                CreatedBy = request.CreatedBy ?? "System"
+                CreatedBy = request.CurrentUserId
             };
 
             var debitLine = new JournalEntryLine(accountId, request.Dto.Amount, 0m, "Cash/Bank Payment");
