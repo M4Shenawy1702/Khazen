@@ -3,39 +3,50 @@ using Khazen.Application.DOTs.HRModule.AdvanceDtos;
 using Khazen.Application.UseCases.HRModule.AdvanceUseCases.Commands.Create;
 using Khazen.Application.UseCases.HRModule.AdvanceUseCases.Commands.Toggle;
 using Khazen.Application.UseCases.HRModule.AdvanceUseCases.Queries.GetAll;
+using Khazen.Presentation.Attributes;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Khazen.Presentation.Controllers.HRModule
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AdvancesController(IMediator mediator) : ControllerBase
+    [Authorize]
+    public class AdvancesController(ISender mediator) : ControllerBase
     {
-        private readonly IMediator _mediator = mediator;
+        private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? throw new UnauthorizedAccessException("User identity not available.");
 
         [HttpPost]
-        public async Task<ActionResult<AdvanceDto>> AddAdvance(AddAdvanceDto dto)
+        [CacheInvalidate("/api/Advances")]
+        [CacheInvalidate("/api/Accounts")]
+        public async Task<ActionResult<AdvanceDto>> AddAdvance([FromBody] AddAdvanceDto dto)
         {
-            var userName = User.Identity?.Name;
-            if (userName == null) return BadRequest("User name is null");
-            var result = await _mediator.Send(new AddAdvanceCommand(dto, userName));
+            var result = await mediator.Send(new AddAdvanceCommand(dto, CurrentUserId));
+
             return Ok(result);
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<AdvanceDto>>> GetAllAdvances([FromQuery] AdvanceQueryParameters QueryParameters)
+        [RedisCache(120)]
+        public async Task<ActionResult<List<AdvanceDto>>> GetAllAdvances([FromQuery] AdvanceQueryParameters queryParameters)
         {
-            var result = await _mediator.Send(new GetAllAdvanceQuery(QueryParameters));
+            var result = await mediator.Send(new GetAllAdvanceQuery(queryParameters));
             return Ok(result);
         }
 
-        [HttpPatch("{id}")]
-        public async Task<IActionResult> ToggleAdvance(int id)
+        [HttpPatch("toggle/{id:int}")]
+        [CacheInvalidate("/api/Advances")]
+        [CacheInvalidate("/api/Accounts")]
+        public async Task<IActionResult> ToggleAdvance(int id, [FromHeader(Name = "If-Match")] string rowVersion)
         {
-            var userName = User.Identity?.Name;
-            if (userName == null) return BadRequest("User name is null");
-            return Ok(_mediator.Send(new ToggleAdvanceCommand(id, userName)));
+            var rowVersionBytes = Convert.FromBase64String(rowVersion);
+
+            var result = await mediator.Send(new ToggleAdvanceCommand(id, rowVersionBytes, CurrentUserId));
+
+            return Ok(result);
         }
     }
 }

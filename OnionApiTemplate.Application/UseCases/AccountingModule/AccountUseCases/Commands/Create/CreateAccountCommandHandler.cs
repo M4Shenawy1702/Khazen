@@ -31,11 +31,11 @@ namespace Khazen.Application.UseCases.AccountingModule.AccountUseCases.Commands.
                      string.Join(", ", validatorResult.Errors.Select(e => e.ErrorMessage)));
                     throw new BadRequestException(validatorResult.Errors.Select(x => x.ErrorMessage).ToList());
                 }
-                var user = await _userManager.FindByNameAsync(request.CreatedBy);
+                var user = await _userManager.FindByNameAsync(request.CurrentUserId);
                 if (user is null)
                 {
-                    _logger.LogInformation("User not found. Username: {CreatedBy}", request.CreatedBy);
-                    throw new NotFoundException<ApplicationUser>(request.CreatedBy);
+                    _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
+                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
                 var accountRepository = _unitOfWork.GetRepository<Account, Guid>();
 
@@ -51,14 +51,12 @@ namespace Khazen.Application.UseCases.AccountingModule.AccountUseCases.Commands.
 
                 await EnsureNoDuplicatesAsync(request, accountRepository, cancellationToken);
 
-                var account = new Account(request.Dto.Name, request.Dto.Code, request.Dto.Description, request.Dto.AccountType, request.CreatedBy, request.Dto.ParentId);
+                var account = new Account(request.Dto.Name, request.Dto.Code, request.Dto.Description, request.Dto.AccountType, user.Id, request.Dto.ParentId);
                 await accountRepository.AddAsync(account, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 _logger.LogInformation("Account created successfully with Id: {AccountId}", account.Id);
 
                 _logger.LogDebug("Cache keys invalidated after creating account: {AccountId}", account.Id);
-
-                await _cacheService.RemoveByPatternAsync("Khazen_/api/Accounts*");
 
                 return _mapper.Map<AccountDetailsDto>(account);
             }

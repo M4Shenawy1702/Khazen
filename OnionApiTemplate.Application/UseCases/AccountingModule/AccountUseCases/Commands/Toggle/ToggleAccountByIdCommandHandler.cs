@@ -29,11 +29,11 @@ namespace Khazen.Application.UseCases.AccountingModule.AccountUseCases.Commands.
                 if (!validatorResult.IsValid)
                     throw new BadRequestException(string.Join(",", validatorResult.Errors.Select(x => x.ErrorMessage)));
 
-                var user = await _userManager.FindByNameAsync(request.ToggledBy);
+                var user = await _userManager.FindByNameAsync(request.CurrentUserId);
                 if (user is null)
                 {
-                    _logger.LogInformation("User not found. Username: {ToggledBy}", request.ToggledBy);
-                    throw new NotFoundException<ApplicationUser>(request.ToggledBy);
+                    _logger.LogInformation("User not found. Username: {CurrentUserId}", request.CurrentUserId);
+                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
                 var accountRepository = _unitOfWork.GetRepository<Account, Guid>();
 
@@ -43,6 +43,8 @@ namespace Khazen.Application.UseCases.AccountingModule.AccountUseCases.Commands.
                     _logger.LogWarning("Account with Id: {AccountId} not found", request.Id);
                     throw new NotFoundException<Account>(request.Id);
                 }
+                account.AssertRowVersion(request.RowVersion);
+
                 var hasChildren = await accountRepository.AnyAsync(a => a.ParentId == request.Id, cancellationToken);
                 if (hasChildren)
                 {
@@ -50,15 +52,11 @@ namespace Khazen.Application.UseCases.AccountingModule.AccountUseCases.Commands.
                     throw new BadRequestException($"Cannot delete account with Id {request.Id} because it has child accounts.");
                 }
 
-                account.Toggle(request.ToggledBy);
-                accountRepository.Update(account);
+                account.Toggle(user.Id);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 _logger.LogInformation("Successfully deleted Account with Id: {AccountId}", request.Id);
 
                 _logger.LogDebug("Cache keys invalidated after toggling account: {AccountId}", account.Id);
-
-                await _cacheService.RemoveAsync($"Khazen_/api/Accounts/{account.Id}");
-                await _cacheService.RemoveByPatternAsync("Khazen_/api/Accounts*");
                 return true;
             }
             catch (Exception ex)

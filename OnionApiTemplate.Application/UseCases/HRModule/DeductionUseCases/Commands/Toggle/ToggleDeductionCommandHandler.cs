@@ -38,7 +38,7 @@ namespace Khazen.Application.UseCases.HRModule.DeductionUseCases.Commands.Delete
                 throw new BadRequestException("Cannot toggle a deduction that has already been processed in payroll.");
             }
 
-            _logger.LogInformation("Toggling IsDeleted for DeductionId: {DeductionId} by {ModifiedBy}", request.Id, request.ToggledBy);
+            _logger.LogInformation("Toggling IsDeleted for DeductionId: {DeductionId} by {CurrentUserId}", request.Id, request.ToggledBy);
             deduction.Toggle(request.ToggledBy);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

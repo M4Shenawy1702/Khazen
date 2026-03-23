@@ -23,7 +23,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.De
 
         public async Task<SalesOrderDto> Handle(DeliverOrderCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Start delivery process for order {OrderId} by user {User}", request.Id, request.DeliveredBy);
+            _logger.LogInformation("Start delivery process for order {OrderId} by user {User}", request.Id, request.CurrentUserId);
 
             var validationResult = await _validator.ValidateAsync(request, cancellationToken);
             if (!validationResult.IsValid)
@@ -32,11 +32,11 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.De
                 throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
             }
 
-            var user = await _userManager.FindByNameAsync(request.DeliveredBy);
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
             if (user is null)
             {
-                _logger.LogWarning("User not found while delivering order. UserName: {DeliveredBy}", request.DeliveredBy);
-                throw new NotFoundException<ApplicationUser>(request.DeliveredBy);
+                _logger.LogWarning("User not found while delivering order. UserName: {CurrentUserId}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -69,8 +69,8 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.De
                     throw new BadRequestException($"Only shipped orders can be delivered. Current status: {salesOrder.Status}");
                 }
 
-                salesOrder.MarkAsDelivered(request.DeliveredBy);
-                _logger.LogInformation("Order {OrderId} marked as delivered by {User}", salesOrder.Id, request.DeliveredBy);
+                salesOrder.MarkAsDelivered(user.Id);
+                _logger.LogInformation("Order {OrderId} marked as delivered by {User}", salesOrder.Id, request.CurrentUserId);
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
                 _logger.LogInformation("Delivery transaction committed successfully for order {OrderId}", request.Id);

@@ -32,6 +32,13 @@ namespace Khazen.Application.UseCases.ConfigurationsModule.CompanySettingUsecase
                 throw new BadRequestException(errors);
             }
 
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            if (user == null)
+            {
+                _logger.LogWarning("Settings update failed: Updater user '{Username}' not found.", request.CurrentUserId);
+                throw new NotFoundException($"Updater user '{request.CurrentUserId}' not found.");
+            }
+
             var companyRepository = _unitOfWork.GetRepository<CompanySetting, int>();
 
             var companySetting = await companyRepository.FirstOrDefaultAsync(cancellationToken);
@@ -49,6 +56,7 @@ namespace Khazen.Application.UseCases.ConfigurationsModule.CompanySettingUsecase
             }
 
             companySetting.ThemeColor = request.ThemeColor;
+            companySetting.ModifiedBy = user.Id;
             companySetting.ModifiedAt = DateTime.UtcNow;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

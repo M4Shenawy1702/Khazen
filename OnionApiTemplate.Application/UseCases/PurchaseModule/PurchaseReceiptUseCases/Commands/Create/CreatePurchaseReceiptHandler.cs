@@ -48,7 +48,7 @@ namespace Khazen.Application.UseCases.PurchaseModule.PurchaseReceiptUseCases.Com
                 var user = await _userManager.FindByNameAsync(request.CurrentUserId);
                 if (user is null)
                 {
-                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.CurrentUserId);
+                    _logger.LogInformation("User not found. UserId: {CurrentUserId}", request.CurrentUserId);
                     throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
                 _logger.LogDebug("Fetching Purchase Order with ID {PurchaseOrderId}", request.Dto.PurchaseOrderId);

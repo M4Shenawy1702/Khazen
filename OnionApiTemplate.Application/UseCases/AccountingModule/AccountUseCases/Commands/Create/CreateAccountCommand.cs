@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.AccountingModule.AccountUseCases.Commands.Create
 {
-    public record CreateAccountCommand(CreateAccountDto Dto, string CreatedBy) : IRequest<AccountDetailsDto>;
+    public record CreateAccountCommand(CreateAccountDto Dto, string CurrentUserId) : IRequest<AccountDetailsDto>;
 }

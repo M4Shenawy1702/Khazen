@@ -24,7 +24,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
 
         public async Task<SalesInvoiceDto> Handle(UpdateSalesInvoiceCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting UpdateSalesInvoice. InvoiceId: {InvoiceId}, ModifiedBy: {User}", request.Id, request.ModifiedBy);
+            _logger.LogInformation("Starting UpdateSalesInvoice. InvoiceId: {InvoiceId}, CurrentUserId: {User}", request.Id, request.CurrentUserId);
 
             var validationResult = await _validator.ValidateAsync(request, cancellationToken);
             if (!validationResult.IsValid)
@@ -33,11 +33,11 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
                 throw new BadRequestException(validationResult.Errors.Select(e => e.ErrorMessage).ToList());
             }
 
-            var user = await _userManager.FindByNameAsync(request.ModifiedBy);
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
             if (user is null)
             {
-                _logger.LogWarning("User not found while updating invoice. UserName: {UserName}", request.ModifiedBy);
-                throw new NotFoundException<ApplicationUser>(request.ModifiedBy);
+                _logger.LogWarning("User not found while updating invoice. UserName: {UserName}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -51,6 +51,8 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
                     _logger.LogWarning("Invoice {InvoiceId} not found", request.Id);
                     throw new NotFoundException<SalesInvoice>(request.Id);
                 }
+
+                salesInvoice.AssertRowVersion(request.RowVersion);
 
                 if (salesInvoice.IsPosted || salesInvoice.InvoiceStatus == InvoiceStatus.Paid)
                 {
@@ -69,17 +71,16 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicesUseCases.Commands
                 }
 
                 _logger.LogDebug("Updating invoice {InvoiceId}", salesInvoice.Id);
-                salesInvoice.Modify(request.Dto.InvoiceDate, request.Dto.Notes, request.Dto.CustomerId, request.ModifiedBy);
+                salesInvoice.Modify(request.Dto.InvoiceDate, request.Dto.Notes, request.Dto.CustomerId, user.Id);
 
                 salesInvoice.UpdateInvoiceStatus();
 
                 invoiceRepo.Update(salesInvoice);
 
                 _logger.LogInformation("Saving changes for invoice {InvoiceId}", salesInvoice.Id);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                _logger.LogInformation("Invoice {InvoiceId} updated successfully by {User}.", salesInvoice.Id, request.ModifiedBy);
+                _logger.LogInformation("Invoice {InvoiceId} updated successfully by {User}.", salesInvoice.Id, request.CurrentUserId);
                 return _mapper.Map<SalesInvoiceDto>(salesInvoice);
             }
             catch (Exception ex)

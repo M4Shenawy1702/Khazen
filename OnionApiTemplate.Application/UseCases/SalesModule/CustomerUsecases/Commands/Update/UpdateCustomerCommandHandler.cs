@@ -1,22 +1,23 @@
 ﻿using Khazen.Application.DOTs.SalesModule.Customer;
-using Khazen.Application.UseCases.SalesModule.CustomerUsecases.Commands.Update;
 using Khazen.Domain.Entities.SalesModule;
 using Khazen.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
-namespace Khazen.Application.UseCases.SalesModule.Customers.Commands
+namespace Khazen.Application.UseCases.SalesModule.CustomerUsecases.Commands.Update
 {
     public class UpdateCustomerCommandHandler(
         IUnitOfWork unitOfWork,
         IMapper mapper,
         IValidator<UpdateCustomerCommand> validator,
-        ILogger<UpdateCustomerCommandHandler> logger)
+        ILogger<UpdateCustomerCommandHandler> logger,
+        UserManager<ApplicationUser> userManager)
         : IRequestHandler<UpdateCustomerCommand, CustomerDto>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
         private readonly IValidator<UpdateCustomerCommand> _validator = validator;
         private readonly ILogger<UpdateCustomerCommandHandler> _logger = logger;
+        private readonly UserManager<ApplicationUser> _userManager = userManager;
 
         public async Task<CustomerDto> Handle(UpdateCustomerCommand request, CancellationToken cancellationToken)
         {
@@ -25,6 +26,13 @@ namespace Khazen.Application.UseCases.SalesModule.Customers.Commands
             {
                 _logger.LogWarning("Validation failed for UpdateCustomerCommand: {@Errors}", validationResult.Errors);
                 throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
+            }
+
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
+            if (user == null)
+            {
+                _logger.LogError("Identity User {UserId} not found.", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 
             try
@@ -50,7 +58,7 @@ namespace Khazen.Application.UseCases.SalesModule.Customers.Commands
                     request.Dto.Name,
                     request.Dto.Address,
                     request.Dto.CustomerType,
-                    request.ModifiedBy);
+                    user.Id);
 
                 repo.Update(customer);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

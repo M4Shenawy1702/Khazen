@@ -12,23 +12,23 @@ using Microsoft.Extensions.Logging;
 
 namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Commands.Delete
 {
-    internal class DeleteSalesInvoicePaymentHandler(
+    internal class ReverseSalesInvoicePaymentHandler(
     IUnitOfWork unitOfWork,
     IMapper mapper,
     INumberSequenceService numberSequenceService,
-    ILogger<DeleteSalesInvoicePaymentHandler> logger, ISalesPaymentDomainService salesPaymentDomainService, IJournalEntryService journalEntryService, ISafeTransactionService safeTransactionService, UserManager<ApplicationUser> userManager
-    ) : IRequestHandler<DeleteSalesInvoicePaymentCommand, SalesInvoicePaymentDto>
+    ILogger<ReverseSalesInvoicePaymentHandler> logger, ISalesPaymentDomainService salesPaymentDomainService, IJournalEntryService journalEntryService, ISafeTransactionService safeTransactionService, UserManager<ApplicationUser> userManager
+    ) : IRequestHandler<ReverseSalesInvoicePaymentCommand, SalesInvoicePaymentDto>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
         private readonly INumberSequenceService _numberSequenceService = numberSequenceService;
-        private readonly ILogger<DeleteSalesInvoicePaymentHandler> _logger = logger;
+        private readonly ILogger<ReverseSalesInvoicePaymentHandler> _logger = logger;
         private readonly ISalesPaymentDomainService _salesPaymentDomainService = salesPaymentDomainService;
         private readonly IJournalEntryService _journalEntryService = journalEntryService;
         private readonly ISafeTransactionService _safeTransactionService = safeTransactionService;
         private readonly UserManager<ApplicationUser> _userManager = userManager;
 
-        public async Task<SalesInvoicePaymentDto> Handle(DeleteSalesInvoicePaymentCommand request, CancellationToken cancellationToken)
+        public async Task<SalesInvoicePaymentDto> Handle(ReverseSalesInvoicePaymentCommand request, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Starting reversal for SalesInvoicePayment {PaymentId}", request.Id);
             var user = await _userManager.FindByNameAsync(request.CurrentUserId);
@@ -49,8 +49,10 @@ namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Co
                     throw new NotFoundException<SalesInvoicePayment>(request.Id);
                 }
 
-                _salesPaymentDomainService.ReversePayment(request, payment);
-                JournalEntry reversalJournal = await _journalEntryService.CreateReverseSalesPaymentJournalEntry(payment, user.UserName!, cancellationToken);
+                payment.AssertRowVersion(request.RowVersion);
+
+                payment.Reverse(user.Id);
+                JournalEntry reversalJournal = await _journalEntryService.CreateReverseSalesPaymentJournalEntry(payment, user.Id, cancellationToken);
 
                 await _unitOfWork.GetRepository<JournalEntry, Guid>().AddAsync(reversalJournal, cancellationToken);
 

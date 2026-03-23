@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.SalesModule.CustomerUsecases.Commands.Update
 {
-    public record UpdateCustomerCommand(Guid Id, UpdateCustomerDto Dto, string ModifiedBy) : IRequest<CustomerDto>;
+    public record UpdateCustomerCommand(Guid Id, UpdateCustomerDto Dto, string CurrentUserId) : IRequest<CustomerDto>;
 }

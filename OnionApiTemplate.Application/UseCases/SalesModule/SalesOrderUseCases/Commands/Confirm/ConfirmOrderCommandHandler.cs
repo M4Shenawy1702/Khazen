@@ -27,7 +27,7 @@ internal class ConfirmOrderCommandHandler(
 
     public async Task<SalesOrderDto> Handle(ConfirmOrderCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting order confirmation. OrderId: {OrderId}, ConfirmedBy: {User}", request.Id, request.ConfirmedBy);
+        _logger.LogInformation("Starting order confirmation. OrderId: {OrderId}, ConfirmedBy: {User}", request.Id, request.CurrentUserId);
 
         var validationResult = await _validator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
@@ -36,11 +36,11 @@ internal class ConfirmOrderCommandHandler(
             throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
         }
 
-        var user = await _userManager.FindByNameAsync(request.ConfirmedBy);
+        var user = await _userManager.FindByNameAsync(request.CurrentUserId);
         if (user is null)
         {
-            _logger.LogWarning("User not found while confirming order. UserName: {ConfirmedBy}", request.ConfirmedBy);
-            throw new NotFoundException<ApplicationUser>(request.ConfirmedBy);
+            _logger.LogWarning("User not found while confirming order. UserName: {CurrentUserId}", request.CurrentUserId);
+            throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
         }
 
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -83,7 +83,7 @@ internal class ConfirmOrderCommandHandler(
             await _stockReservationService.ValidateReservedQuantitiesAsync(salesOrder, productLookup);
 
             var oldStatus = salesOrder.Status;
-            salesOrder.MarkAsConfirmed();
+            salesOrder.MarkAsConfirmed(user.Id);
             _logger.LogInformation(
                 "SalesOrder {OrderId} confirmed by {User}. Status changed from {OldStatus} to {NewStatus}",
                 salesOrder.Id, user.UserName, oldStatus, salesOrder.Status

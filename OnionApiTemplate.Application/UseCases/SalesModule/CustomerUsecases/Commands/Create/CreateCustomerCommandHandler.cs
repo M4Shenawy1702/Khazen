@@ -33,11 +33,11 @@ namespace Khazen.Application.UseCases.SalesModule.CustomerUsecases.Commands.Crea
                     request.Dto.Name, validationResult.Errors.Select(e => e.ErrorMessage));
                 throw new BadRequestException(validationResult.Errors.Select(e => e.ErrorMessage).ToList());
             }
-            var user = await _userManager.FindByNameAsync(request.CreatedBy);
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
             if (user is null)
             {
-                _logger.LogInformation("User not found. UserName: {ModifiedBy}", request.CreatedBy);
-                throw new NotFoundException<ApplicationUser>(request.CreatedBy);
+                _logger.LogInformation("User not found. CurrentUserId: {CurrentUserId}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -54,25 +54,16 @@ namespace Khazen.Application.UseCases.SalesModule.CustomerUsecases.Commands.Crea
                 }
 
                 _logger.LogInformation("Registering user for customer {CustomerName}", request.Dto.Name);
-                var userId = await _userRegistrationService.RegisterCustomerUserAsync(
-                    request.Dto.UserName,
-                    request.Dto.Email,
-                    request.Dto.PhoneNumber,
-                    request.Dto.Name,
-                    request.Dto.Address,
-                    request.Dto.Password,
-                    cancellationToken);
+                var userId = await _userRegistrationService.RegisterCustomerUserAsync(request.Dto, user.Id, cancellationToken);
 
                 var customer = new Customer(
                     request.Dto.Name,
                     request.Dto.Address,
                     userId,
                     request.Dto.CustomerType,
-                    request.CreatedBy);
+                    user.Id);
 
                 await customerRepo.AddAsync(customer, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
                 _logger.LogInformation("Customer {CustomerName} created successfully with ID {CustomerId}",

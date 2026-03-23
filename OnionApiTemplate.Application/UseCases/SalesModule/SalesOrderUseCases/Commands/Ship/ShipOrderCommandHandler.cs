@@ -28,7 +28,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.Sh
 
         public async Task<SalesOrderDto> Handle(ShipOrderCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Start shipping process for order {OrderId} by user {User}", request.Id, request.ShippedBy);
+            _logger.LogInformation("Start shipping process for order {OrderId} by user {User}", request.Id, request.CurrentUserId);
 
             var validationResult = await _validator.ValidateAsync(request, cancellationToken);
             if (!validationResult.IsValid)
@@ -41,13 +41,13 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.Sh
 
             try
             {
-                var user = await _userManager.FindByNameAsync(request.ShippedBy);
+                var user = await _userManager.FindByNameAsync(request.CurrentUserId);
                 if (user is null)
                 {
-                    _logger.LogWarning("User {User} not found while shipping order {OrderId}", request.ShippedBy, request.Id);
-                    throw new NotFoundException<ApplicationUser>(request.ShippedBy);
+                    _logger.LogWarning("User {User} not found while shipping order {OrderId}", request.CurrentUserId, request.Id);
+                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
-                _logger.LogInformation("User {User} verified for shipping order {OrderId}", request.ShippedBy, request.Id);
+                _logger.LogInformation("User {User} verified for shipping order {OrderId}", request.CurrentUserId, request.Id);
 
                 var salesOrdersRepository = _unitOfWork.GetRepository<SalesOrder, Guid>();
                 var salesOrder = await salesOrdersRepository.GetAsync(new GetSalesOrderByIdSpecification(request.Id), cancellationToken);
@@ -90,8 +90,8 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.Sh
 
                 warehouseProductsRepository.UpdateRange(warehouseProducts);
 
-                salesOrder.MarkAsShipped(request.ShippedBy, request.Dto.TrackingNumber);
-                _logger.LogInformation("Order {OrderId} marked as shipped by {User}", salesOrder.Id, request.ShippedBy);
+                salesOrder.MarkAsShipped(user.Id, request.Dto.TrackingNumber);
+                _logger.LogInformation("Order {OrderId} marked as shipped by {User}", salesOrder.Id, request.CurrentUserId);
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
                 _logger.LogInformation("Shipping transaction committed successfully for order {OrderId}", request.Id);

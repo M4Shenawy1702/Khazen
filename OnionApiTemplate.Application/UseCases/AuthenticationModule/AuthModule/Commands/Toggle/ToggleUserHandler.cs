@@ -16,6 +16,13 @@ namespace Khazen.Application.UseCases.AuthenticationModule.AuthModule.Commands.T
         {
             _logger.LogInformation("Toggle user status request received for UserId: {UserId}", request.Id);
 
+            var Creatoruser = await _userManager.FindByIdAsync(request.CurrentUserId);
+            if (Creatoruser is null)
+            {
+                _logger.LogWarning("Actor user not found. CurrentUserId: {CurrentUserId}", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
+
             var user = await _userManager.Users
                 .Include(u => u.RefreshTokens)
                 .FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
@@ -33,6 +40,8 @@ namespace Khazen.Application.UseCases.AuthenticationModule.AuthModule.Commands.T
             bool willBeActive = !user.IsActive;
 
             user.IsActive = willBeActive;
+            user.CreatedBy = Creatoruser.Id;
+            user.UpdatedAt = DateTime.UtcNow;
 
             if (wasActive && !willBeActive)
             {

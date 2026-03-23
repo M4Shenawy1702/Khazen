@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Commands.Create
 {
-    public record CreateSalesInvoicePaymentCommand(CreateSalesInvoicePaymentDto Dto, string CreatedBy) : IRequest<SalesInvoicePaymentDto>;
+    public record CreateSalesInvoicePaymentCommand(CreateSalesInvoicePaymentDto Dto, string CurrentUserId) : IRequest<SalesInvoicePaymentDto>;
 }

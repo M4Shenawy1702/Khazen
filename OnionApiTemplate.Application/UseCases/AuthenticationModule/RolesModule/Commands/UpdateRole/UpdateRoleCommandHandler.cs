@@ -37,11 +37,11 @@ namespace Khazen.Application.UseCases.AuthService.RolesModule.Commands.UpdateRol
                 throw new NotFoundException<ApplicationRole>(request.RoleId);
             }
 
-            var updaterUser = await _userManager.FindByNameAsync(request.ModifiedBy);
+            var updaterUser = await _userManager.FindByNameAsync(request.CurrentUserId);
             if (updaterUser == null)
             {
-                _logger.LogWarning("Role update failed: Updater user '{Username}' not found.", request.ModifiedBy);
-                throw new NotFoundException($"Updater user '{request.ModifiedBy}' not found.");
+                _logger.LogWarning("Role update failed: Updater user '{Username}' not found.", request.CurrentUserId);
+                throw new NotFoundException($"Updater user '{request.CurrentUserId}' not found.");
             }
 
             var roleWithSameName = await _roleManager.FindByNameAsync(request.NewRoleName.Trim());
@@ -67,7 +67,7 @@ namespace Khazen.Application.UseCases.AuthService.RolesModule.Commands.UpdateRol
             }
 
             existingRole.ModifiedAt = DateTime.UtcNow;
-            existingRole.ModifiedBy = request.ModifiedBy;
+            existingRole.ModifiedBy = request.CurrentUserId;
 
             var result = await _roleManager.UpdateAsync(existingRole);
 

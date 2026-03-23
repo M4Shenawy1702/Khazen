@@ -29,8 +29,8 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.Ca
         public async Task<SalesOrderDto> Handle(CancelOrderCommand request, CancellationToken cancellationToken)
         {
             _logger.LogInformation(
-                "Starting CancelOrder process | OrderId: {OrderId} | CanceledBy: {CanceledBy}",
-                request.Id, request.CanceledBy);
+                "Starting CancelOrder process | OrderId: {OrderId} | CurrentUserId: {CurrentUserId}",
+                request.Id, request.CurrentUserId);
 
             var validationResult = await _validator.ValidateAsync(request, cancellationToken);
             if (!validationResult.IsValid)
@@ -48,11 +48,11 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.Ca
 
             try
             {
-                var user = await _userManager.FindByNameAsync(request.CanceledBy);
+                var user = await _userManager.FindByNameAsync(request.CurrentUserId);
                 if (user is null)
                 {
-                    _logger.LogInformation("User not found. UserName: {CanceledBy}", request.CanceledBy);
-                    throw new NotFoundException<ApplicationUser>(request.CanceledBy);
+                    _logger.LogInformation("User not found. UserName: {CurrentUserId}", request.CurrentUserId);
+                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
 
                 var orderRepo = _unitOfWork.GetRepository<SalesOrder, Guid>();
@@ -107,11 +107,11 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.Ca
 
                 _logger.LogInformation("Stock unreserved successfully for OrderId {OrderId}", request.Id);
 
-                salesOrder.MarkAsCanceled(request.CanceledBy);
+                salesOrder.MarkAsCanceled(user.Id);
 
                 _logger.LogInformation(
-                    "Order marked as cancelled | OrderId: {OrderId} | CanceledBy: {CanceledBy}",
-                    request.Id, request.CanceledBy);
+                    "Order marked as cancelled | OrderId: {OrderId} | CurrentUserId: {CurrentUserId}",
+                    request.Id, request.CurrentUserId);
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 

@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.Deliverd
 {
-    public record DeliverOrderCommand(Guid Id, byte[] RowVersion, string DeliveredBy) : IRequest<SalesOrderDto>;
+    public record DeliverOrderCommand(Guid Id, byte[] RowVersion, string CurrentUserId) : IRequest<SalesOrderDto>;
 }

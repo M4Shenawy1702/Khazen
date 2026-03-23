@@ -7,65 +7,58 @@ using Khazen.Application.UseCases.AccountingModule.AccountUseCases.Queries.GetAl
 using Khazen.Application.UseCases.AccountingModule.AccountUseCases.Queries.GetById;
 using Khazen.Presentation.Attributes;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
-namespace Khazen.Presentation.Controllers.AccountingModule
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class AccountsController(ISender sender) : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    //[Authorize]
-    public class AccountsController : ControllerBase
+    private string CurrentUserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                         ?? throw new UnauthorizedAccessException("User identity not available.");
+
+    [HttpPost]
+    [CacheInvalidate("/api/Accounts")]
+    public async Task<ActionResult<AccountDetailsDto>> Create([FromBody] CreateAccountDto dto)
     {
-        private readonly ISender _sender;
+        var result = await sender.Send(new CreateAccountCommand(dto, CurrentUserId));
+        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+    }
 
-        public AccountsController(ISender sender)
-        {
-            _sender = sender;
-        }
-        [HttpPost]
-        public async Task<ActionResult<AccountDetailsDto>> Create([FromBody] CreateAccountDto dto)
-        {
-            var user = User.Identity?.Name;
-            //if (user == null)
-            //    return BadRequest("User not found");
-            var result = await _sender.Send(new CreateAccountCommand(dto, user ?? "System"));
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
-        }
+    [HttpPut("{id:guid}")]
+    [CacheInvalidate("/api/Accounts")]
+    public async Task<ActionResult<AccountDetailsDto>> Update(Guid id, [FromBody] UpdateAccountDto dto, [FromHeader(Name = "If-Match")] string rowVersion)
+    {
+        var rowVersionBytes = Convert.FromBase64String(rowVersion);
+        var result = await sender.Send(new UpdateAccountByIdCommand(id, dto, rowVersionBytes, CurrentUserId));
+        return Ok(result);
+    }
 
-        [HttpPut("{id:guid}")]
-        public async Task<ActionResult<AccountDetailsDto>> Update(Guid id, [FromBody] UpdateAccountDto dto)
-        {
-            var user = User.Identity?.Name;
-            if (user == null)
-                return BadRequest("User not found");
-            var result = await _sender.Send(new UpdateAccountByIdCommand(id, dto, user));
-            return Ok(result);
-        }
+    [HttpPatch("toggle/{id:guid}")]
+    [CacheInvalidate("/api/Accounts")]
+    public async Task<ActionResult<bool>> Toggle(Guid id, [FromHeader(Name = "If-Match")] string rowVersion)
+    {
+        var rowVersionBytes = Convert.FromBase64String(rowVersion);
+        var result = await sender.Send(new ToggleAccountByIdCommand(id, rowVersionBytes, CurrentUserId));
 
-        [HttpPatch("toggle/{id:guid}")]
-        public async Task<ActionResult<bool>> Toggle(Guid id)
-        {
-            var user = User.Identity?.Name;
-            if (user == null)
-                return BadRequest("User not found");
-            var result = await _sender.Send(new ToggleAccountByIdCommand(id, user));
-            return result ? NoContent() : NotFound();
-        }
+        return Ok(result);
+    }
 
-        [HttpGet("{id:guid}")]
-        [RedisCache(360)]
-        public async Task<ActionResult<AccountDetailsDto>> GetById(Guid id)
-        {
-            var result = await _sender.Send(new GetAccountByIdQuery(id));
-            return Ok(result);
-        }
+    [HttpGet("{id:guid}")]
+    [RedisCache(360)]
+    public async Task<ActionResult<AccountDetailsDto>> GetById(Guid id)
+    {
+        var result = await sender.Send(new GetAccountByIdQuery(id));
+        return Ok(result);
+    }
 
-        [HttpGet]
-        [RedisCache(360)]
-        public async Task<ActionResult<IEnumerable<AccountDto>>> GetAll([FromQuery] AccountQueryParameters queryParameters)
-        {
-            var result = await _sender.Send(new GetAllAccountsQuery(queryParameters));
-            return Ok(result);
-        }
+    [HttpGet]
+    [RedisCache(360)]
+    public async Task<ActionResult<IEnumerable<AccountDto>>> GetAll([FromQuery] AccountQueryParameters queryParameters)
+    {
+        var result = await sender.Send(new GetAllAccountsQuery(queryParameters));
+        return Ok(result);
     }
 }

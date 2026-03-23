@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.ConfigurationsModule.ComapnySettingUsecases.Commands.UpdateThemeColor
 {
-    public record UpdateThemeColorCommand(string ThemeColor) : IRequest<CompanySettingDto>;
+    public record UpdateThemeColorCommand(string ThemeColor, string CurrentUserId) : IRequest<CompanySettingDto>;
 }

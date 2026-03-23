@@ -41,11 +41,11 @@ internal class CreateSalesInvoiceCommandHandler(
             throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
         }
 
-        var user = await _userManager.FindByNameAsync(request.CreatedBy);
+        var user = await _userManager.FindByNameAsync(request.CurrentUserId);
         if (user is null)
         {
-            _logger.LogInformation("User not found. UserName: {CreatedBy}", request.CreatedBy);
-            throw new NotFoundException<ApplicationUser>(request.CreatedBy);
+            _logger.LogInformation("User not found. UserName: {CurrentUserId}", request.CurrentUserId);
+            throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
         }
 
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -83,7 +83,7 @@ internal class CreateSalesInvoiceCommandHandler(
                 customer.Id
             );
 
-            var salesInvoice = await _salesInvoiceService.CreateSalesInvoice(salesOrder, customer, request.Dto, request.CreatedBy, cancellationToken);
+            var salesInvoice = await _salesInvoiceService.CreateSalesInvoice(salesOrder, customer, request.Dto, user.Id, cancellationToken);
 
             _logger.LogDebug(
                 "Sales invoice built in service. InvoiceNumber: {Number}, SubTotal: {Sub}, GrandTotal: {Total}",

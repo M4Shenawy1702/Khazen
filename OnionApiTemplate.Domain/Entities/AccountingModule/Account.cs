@@ -1,5 +1,6 @@
 ﻿using Khazen.Domain.Common.Enums;
 using Khazen.Domain.Exceptions;
+using System.ComponentModel.DataAnnotations;
 
 namespace Khazen.Domain.Entities.AccountingModule
 {
@@ -43,12 +44,22 @@ namespace Khazen.Domain.Entities.AccountingModule
         public DateTime? ToggledAt { get; set; }
         public string? ToggledBy { get; set; }
 
-        public decimal Balance { get; set; } //todo : Calculate Balance from JournalEntryLines
+        public decimal Balance { get; set; }
         public ICollection<Account> Children { get; set; } = [];
         public ICollection<JournalEntryLine> JournalEntryLines { get; set; } = [];
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
+        public void AssertRowVersion(byte[]? requestVersion)
+        {
+            if (requestVersion is null)
+                throw new ConcurrencyException("RowVersion is missing.");
 
-        //public void UpdateBalance() => Balance = JournalEntryLines.Sum(l => l.Debit) - JournalEntryLines.Sum(l => l.Credit);
+            if (RowVersion is null)
+                throw new ConcurrencyException("Entity RowVersion is missing.");
 
+            if (!RowVersion.SequenceEqual(requestVersion))
+                throw new ConcurrencyException("Order was modified by another user.");
+        }
         public void ApplyDebit(decimal amount) => Balance += amount;
         public void ApplyCredit(decimal amount)
         {

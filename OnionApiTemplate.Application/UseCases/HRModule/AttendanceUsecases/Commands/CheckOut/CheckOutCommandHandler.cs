@@ -21,7 +21,7 @@ namespace Khazen.Application.UseCases.HRModule.AttendanceUsecases.Commands.Check
             var checkOutTime = request.Dto.CheckOutTime ?? TimeOnly.FromDateTime(DateTime.UtcNow);
             var targetDate = DateOnly.FromDateTime(DateTime.UtcNow);
 
-            _logger.LogInformation("Starting CheckOut for EmployeeId: {EmployeeId} on {Date} at {Time} by modifiedBy: {ModifiedBy}",
+            _logger.LogInformation("Starting CheckOut for EmployeeId: {EmployeeId} on {Date} at {Time} by CurrentUserId: {CurrentUserId}",
                 request.Dto.EmployeeId, targetDate, checkOutTime, request.CurrentUserId);
 
             var user = await _userManager.FindByNameAsync(request.CurrentUserId);

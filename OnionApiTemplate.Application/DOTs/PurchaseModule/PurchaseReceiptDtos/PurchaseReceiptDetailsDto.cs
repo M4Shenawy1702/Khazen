@@ -11,7 +11,7 @@ namespace Khazen.Application.DOTs.PurchaseModule.PurchaseReceiptDtos
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? ModifiedAt { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
-        public string? ModifiedBy { get; set; }
+        public string? CurrentUserId { get; set; }
         public string ReceiptNumber { get; private set; } = default!;
         public DateTime ReceiptDate { get; private set; } = DateTime.UtcNow;
         public string? Notes { get; private set; }

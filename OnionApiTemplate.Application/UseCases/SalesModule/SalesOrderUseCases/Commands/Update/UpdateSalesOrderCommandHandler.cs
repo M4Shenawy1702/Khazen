@@ -43,13 +43,13 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.Up
                 throw new BadRequestException(validationResult.Errors.Select(x => x.ErrorMessage).ToList());
             }
 
-            var user = await _userManager.FindByNameAsync(request.ModifiedBy);
+            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
             if (user is null)
             {
-                _logger.LogWarning("User {ModifiedBy} not found while updating order {OrderId}",
-                    request.ModifiedBy, request.Id);
+                _logger.LogWarning("User {CurrentUserId} not found while updating order {OrderId}",
+                    request.CurrentUserId, request.Id);
 
-                throw new NotFoundException<ApplicationUser>(request.ModifiedBy);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -68,13 +68,13 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.Up
                     throw new NotFoundException<SalesOrder>(request.Id);
                 }
 
-                if (request.RowVersion is null)
+                if (request.Dto.RowVersion is null)
                 {
                     _logger.LogWarning("Missing RowVersion for SalesOrder {OrderId}", request.Id);
                     throw new BadRequestException("RowVersion is required.");
                 }
 
-                order.AssertRowVersion(request.RowVersion);
+                order.AssertRowVersion(request.Dto.RowVersion);
                 _logger.LogInformation("RowVersion validated for SalesOrder {OrderId}", request.Id);
 
                 if (order.Status != OrderStatus.Pending)
@@ -111,7 +111,7 @@ namespace Khazen.Application.UseCases.SalesModule.SalesOrderUseCases.Commands.Up
                    request.Dto,
                    order,
                    warehouseProducts,
-                   request.ModifiedBy);
+                  user.Id);
 
                 ordersRepo.Update(order);
 

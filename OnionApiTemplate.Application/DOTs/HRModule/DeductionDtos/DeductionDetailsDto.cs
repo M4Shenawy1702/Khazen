@@ -12,6 +12,6 @@
         public decimal Amount { get; set; }
         public string Reason { get; set; }
         public string CreatedBy { get; set; }
-        public string? ModifiedBy { get; set; }
+        public string? CurrentUserId { get; set; }
     }
 }

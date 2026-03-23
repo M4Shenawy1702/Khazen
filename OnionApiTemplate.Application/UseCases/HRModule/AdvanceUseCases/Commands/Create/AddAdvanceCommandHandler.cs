@@ -44,11 +44,11 @@ namespace Khazen.Application.UseCases.HRModule.AdvanceUseCases.Commands.Create
                 }
                 _logger.LogDebug("Employee {EmployeeId} found. Calculating total advances and deductions...", request.Dto.EmployeeId);
 
-                var user = await _userManager.FindByNameAsync(request.CreatedBy);
+                var user = await _userManager.FindByNameAsync(request.CurrentUserId);
                 if (user is null)
                 {
-                    _logger.LogInformation("User not found. UserId: {ModifiedBy}", request.CreatedBy);
-                    throw new NotFoundException<ApplicationUser>(request.CreatedBy);
+                    _logger.LogInformation("User not found. UserId: {CurrentUserId}", request.CurrentUserId);
+                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
 
                 var totalAdvances = employee.Advances?.Sum(x => x.Amount) ?? 0;
@@ -66,13 +66,13 @@ namespace Khazen.Application.UseCases.HRModule.AdvanceUseCases.Commands.Create
                 }
 
                 var advanceRepo = _unitOfWork.GetRepository<Advance, int>();
-                var advance = employee.CreateAdvance(request.Dto.Amount, request.Dto.Reason, request.Dto.Date, request.CreatedBy);
+                var advance = employee.CreateAdvance(request.Dto.Amount, request.Dto.Reason, request.Dto.Date, request.CurrentUserId);
 
                 await advanceRepo.AddAsync(advance, cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                _logger.LogInformation("Advance created successfully for Employee {EmployeeId} by {CreatedBy}. AdvanceId: {AdvanceId}",
-                 request.Dto.EmployeeId, request.CreatedBy, advance.Id);
+                _logger.LogInformation("Advance created successfully for Employee {EmployeeId} by {CurrentUserId}. AdvanceId: {AdvanceId}",
+                 request.Dto.EmployeeId, request.CurrentUserId, advance.Id);
 
                 return _mapper.Map<AdvanceDto>(advance);
             }

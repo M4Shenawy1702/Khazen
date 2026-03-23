@@ -8,8 +8,8 @@ namespace Khazen.Application.Validations.SalesModule.CustomerValidations
         {
             RuleFor(x => x.Id)
                 .NotEmpty().WithMessage("Customer Id is required.");
-            RuleFor(x => x.ModifiedBy)
-                .NotEmpty().WithMessage("ModifiedBy is required.");
+            RuleFor(x => x.CurrentUserId)
+                .NotEmpty().WithMessage("CurrentUserId is required.");
         }
     }
 }

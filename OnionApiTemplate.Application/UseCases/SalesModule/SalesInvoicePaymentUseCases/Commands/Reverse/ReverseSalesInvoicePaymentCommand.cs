@@ -2,5 +2,5 @@
 
 namespace Khazen.Application.UseCases.SalesModule.SalesInvoicePaymentUseCases.Commands.Delete
 {
-    public record DeleteSalesInvoicePaymentCommand(Guid Id, byte[] RowVersion, string CurrentUserId) : IRequest<SalesInvoicePaymentDto>;
+    public record ReverseSalesInvoicePaymentCommand(Guid Id, byte[] RowVersion, string CurrentUserId) : IRequest<SalesInvoicePaymentDto>;
 }

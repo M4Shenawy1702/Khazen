@@ -15,12 +15,12 @@ namespace Khazen.Application.UseCases.HRModule.PerformanceReviewUseCases.Command
 
         public async Task<bool> Handle(TogglePerformanceReviewCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting toggle operation for PerformanceReview ID: {Id} by {ModifiedBy}", request.Id, request.CurrentUserId);
+            _logger.LogInformation("Starting toggle operation for PerformanceReview ID: {Id} by {CurrentUserId}", request.Id, request.CurrentUserId);
 
             var user = await _userManager.FindByNameAsync(request.CurrentUserId);
             if (user is null)
             {
-                _logger.LogWarning("User not found: {ModifiedBy}", request.CurrentUserId);
+                _logger.LogWarning("User not found: {CurrentUserId}", request.CurrentUserId);
                 throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 
