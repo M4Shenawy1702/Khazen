@@ -61,6 +61,7 @@ namespace Khazen.API
             app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseStaticFiles();
             app.MapControllers().RequireRateLimiting("GlobalControllerPolicy");
 
             await app.RunAsync();
