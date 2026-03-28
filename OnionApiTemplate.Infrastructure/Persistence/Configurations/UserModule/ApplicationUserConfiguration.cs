@@ -16,7 +16,6 @@ namespace Khazen.Infrastructure.Persistence.Configurations.UserModule
             builder.Property(x => x.Email).IsRequired().HasMaxLength(256);
             builder.Property(x => x.FullName).IsRequired().HasMaxLength(100);
             builder.Property(x => x.PhoneNumber).IsRequired().HasMaxLength(20);
-            builder.Property(x => x.DateOfBirth).IsRequired();
             builder.Property(x => x.Gender).HasConversion<string>().IsRequired();
             builder.Property(x => x.IsActive).IsRequired().HasDefaultValue(true);
 

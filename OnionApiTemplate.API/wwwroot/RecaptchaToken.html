@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://www.google.com/recaptcha/api.js?render=6Le6B5wsAAAAAFFO54xDrAmS02y0GNj8eZN1CW4e"></script>
+</head>
+<body>
+
+<button onclick="getToken()">Get Token</button>
+
+<script>
+function getToken() {
+  grecaptcha.ready(function() {
+    grecaptcha.execute('6Le6B5wsAAAAAFFO54xDrAmS02y0GNj8eZN1CW4e', {action: 'login'}).then(function(token) {
+      console.log("Recaptcha Token:", token);
+    });
+  });
+}
+</script>
+
+</body>
+</html>

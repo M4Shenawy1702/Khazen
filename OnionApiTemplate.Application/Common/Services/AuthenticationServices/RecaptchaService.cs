@@ -25,6 +25,8 @@ namespace Khazen.Application.Common.Services.AuthenticationServices
             var json = await response.Content.ReadAsStringAsync();
 
             var result = JsonSerializer.Deserialize<RecaptchaResponse>(json);
+            _logger.LogWarning("Recaptcha failed for email {Email}. Error: {Error}",
+                email, json);
 
             if (result is null)
                 throw new BadRequestException("Security validation failed. Please try again.");
