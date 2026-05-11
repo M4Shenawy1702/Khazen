@@ -38,7 +38,7 @@ namespace Khazen.Domain.Entities.InventoryModule
         public string SKU { get; set; } = string.Empty;
 
         public string? ToggledBy { get; set; }
-        public DateTime ToggledAt { get; set; }
+        public DateTime? ToggledAt { get; set; }
 
         public Guid BrandId { get; set; }
         public Brand? Brand { get; set; }

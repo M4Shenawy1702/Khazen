@@ -1,6 +1,5 @@
 ﻿using Khazen.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
 using System.Net;
 
 namespace Khazen.API.Middlewares
@@ -37,7 +36,8 @@ namespace Khazen.API.Middlewares
             {
                 NotFoundException => (int)HttpStatusCode.NotFound,
                 BadRequestException => (int)HttpStatusCode.BadRequest,
-                ValidationException => (int)HttpStatusCode.BadRequest,
+                System.ComponentModel.DataAnnotations.ValidationException => (int)HttpStatusCode.BadRequest,
+                FluentValidation.ValidationException => (int)HttpStatusCode.BadRequest,
                 ConflictException => (int)HttpStatusCode.Conflict,
                 ConcurrencyException => (int)HttpStatusCode.Conflict,
                 UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
@@ -46,10 +46,13 @@ namespace Khazen.API.Middlewares
 
             var errors = new List<string>();
 
-            if (ex is ValidationException validationEx)
+            if (ex is FluentValidation.ValidationException fluentEx)
+            {
+                errors.AddRange(fluentEx.Errors.Select(e => e.ErrorMessage));
+            }
+            else if (ex is System.ComponentModel.DataAnnotations.ValidationException validationEx)
             {
                 errors.Add(validationEx.Message);
-
             }
             else
             {
@@ -92,6 +95,7 @@ namespace Khazen.API.Middlewares
             StatusCodes.Status400BadRequest => "Bad Request",
             StatusCodes.Status404NotFound => "Not Found",
             StatusCodes.Status401Unauthorized => "Unauthorized",
+            StatusCodes.Status409Conflict => "Conflict",
             StatusCodes.Status500InternalServerError => "Internal Server Error",
             _ => "An error occurred"
         };

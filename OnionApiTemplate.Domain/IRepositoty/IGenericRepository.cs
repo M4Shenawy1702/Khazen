@@ -12,7 +12,7 @@ namespace Khazen.Domain.IRepositoty
         void Delete(TEntity entity);
 
         Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken, bool trackChanges);
-        Task<TEntity?> GetByIdAsync(TKey key, CancellationToken cancellationToken, bool trackChanges = false);
+        Task<TEntity?> GetByIdAsync(TKey key, CancellationToken cancellationToken, bool trackChanges = true);
         Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken);
         Task<TEntity?> FirstOrDefaultAsync(CancellationToken cancellationToken);
         Task<TEntity?> SingleOrDefaultAsync(CancellationToken cancellationToken);

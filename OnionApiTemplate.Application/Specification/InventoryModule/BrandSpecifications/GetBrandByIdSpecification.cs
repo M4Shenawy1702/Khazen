@@ -7,6 +7,7 @@ namespace Khazen.Application.BaseSpecifications.InventoryModule.BrandSpecificati
         public GetBrandByIdSpecification(Guid id)
             : base(b => b.Id == id)
         {
+            AddInclude(b => b.Products);
         }
     }
 }

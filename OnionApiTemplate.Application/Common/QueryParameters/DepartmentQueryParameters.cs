@@ -8,7 +8,7 @@
         public string? DepartmentName { get; set; }
         public Guid? DepartmentId { get; set; }
 
-        public bool IsActive { get; set; } = true;
+        public bool IsDeleted { get; set; } = true;
         public int PageIndex { get; set; } = 1;
 
         private int _pageSize = DefaultPageSize;

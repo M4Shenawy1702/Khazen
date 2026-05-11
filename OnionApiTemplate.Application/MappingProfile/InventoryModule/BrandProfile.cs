@@ -1,6 +1,4 @@
 ﻿using Khazen.Application.DOTs.InventoryModule.BrandDtos;
-using Khazen.Application.UseCases.InventoryModule.BrandUseCases.Commands.Create;
-using Khazen.Application.UseCases.InventoryModule.BrandUseCases.Commands.Update;
 using Khazen.Domain.Entities.InventoryModule;
 
 namespace Khazen.Application.Mappings.InventoryModule
@@ -13,9 +11,9 @@ namespace Khazen.Application.Mappings.InventoryModule
 
             CreateMap<Brand, BrandDetailsDto>();
 
-            CreateMap<CreateBrandCommand, Brand>();
+            CreateMap<CreateBrandDto, Brand>();
 
-            CreateMap<UpdateBrandCommand, Brand>()
+            CreateMap<UpdateBrandDto, Brand>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore());
         }
     }

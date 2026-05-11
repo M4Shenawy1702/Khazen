@@ -29,10 +29,12 @@ public class DbInitializer(ApplicationDbContext _context, RoleManager<Applicatio
 
             await SeedSafesAsync();
 
+            await SeedSafesAsync();
+
             await SeedEntitiesFromFileAsync<Department>("departments.json");
             await SeedEntitiesFromFileAsync<Account>("accounts.json");
-            await SeedEntitiesFromFileAsync<Brand>("brands.json");
             await SeedEntitiesFromFileAsync<Category>("categories.json");
+            await SeedEntitiesFromFileAsync<Brand>("brands.json");
             await SeedEntitiesFromFileAsync<Warehouse>("warehouses.json");
             await SeedEntitiesFromFileAsync<Product>("products.json");
             await SeedEntitiesFromFileAsync<Supplier>("suppliers.json");

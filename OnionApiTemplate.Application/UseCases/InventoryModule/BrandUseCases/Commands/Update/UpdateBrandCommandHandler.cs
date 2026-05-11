@@ -38,52 +38,43 @@ internal class UpdateBrandCommandHandler(
             throw new NotFoundException<ApplicationUser>($"with ID '{request.CurrentUserId}'");
         }
 
-        try
+        var repo = _unitOfWork.GetRepository<Brand, Guid>();
+
+        var brand = await repo.GetAsync(new GetBrandByIdSpecification(request.Id), cancellationToken);
+        if (brand is null)
         {
-            var repo = _unitOfWork.GetRepository<Brand, Guid>();
-
-            var brand = await repo.GetAsync(new GetBrandByIdSpecification(request.Id), cancellationToken);
-            if (brand is null)
-            {
-                _logger.LogWarning("Brand with Id '{Id}' was not found.", request.Id);
-                throw new NotFoundException<Brand>(request.Id);
-            }
-
-            if (await repo.GetAsync(new GetBrandByNameSpecification(request.Dto.Name), cancellationToken, true) is not null)
-            {
-                _logger.LogWarning("Brand with Name '{Name}' already exists.", request.Dto.Name);
-                throw new AlreadyExistsException<Brand>($"with Name '{request.Dto.Name}'");
-            }
-
-            if (!string.IsNullOrEmpty(request.Dto.ContactEmail) &&
-                await repo.GetAsync(new GetBrandByContactEmailSpecification(request.Dto.ContactEmail), cancellationToken, true) is not null)
-            {
-                _logger.LogWarning("Brand with ContactEmail '{ContactEmail}' already exists.", request.Dto.ContactEmail);
-                throw new AlreadyExistsException<Brand>($"with ContactEmail '{request.Dto.ContactEmail}'");
-            }
-
-            if (!string.IsNullOrEmpty(request.Dto.WebsiteUrl) &&
-                await repo.GetAsync(new GetBrandByWebsiteUrlSpecification(request.Dto.WebsiteUrl), cancellationToken, true) is not null)
-                throw new AlreadyExistsException<Brand>($"with WebsiteUrl '{request.Dto.WebsiteUrl}'");
-            _mapper.Map(request.Dto, brand);
-            brand.ModifiedBy = user.Id;
-            brand.ModifiedAt = DateTime.UtcNow;
-
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            _logger.LogInformation(
-                "Brand '{BrandName}' (ID: {BrandId}) updated successfully.",
-                brand.Name, brand.Id);
-
-            return _mapper.Map<BrandDetailsDto>(brand);
+            _logger.LogWarning("Brand with Id '{Id}' was not found.", request.Id);
+            throw new NotFoundException<Brand>(request.Id);
         }
-        catch (Exception ex)
+
+        if (await repo.GetAsync(new GetBrandByNameSpecification(request.Dto.Name), cancellationToken, true) is not null)
         {
-            _logger.LogError(ex,
-                "Unexpected error occurred while updating Brand ID: {BrandId}",
-                request.Id);
-
-            throw new BadRequestException("An unexpected error occurred while updating the brand.");
+            _logger.LogWarning("Brand with Name '{Name}' already exists.", request.Dto.Name);
+            throw new AlreadyExistsException<Brand>($"with Name '{request.Dto.Name}'");
         }
+
+        if (!string.IsNullOrEmpty(request.Dto.ContactEmail) && brand.ContactEmail != request.Dto.ContactEmail &&
+            await repo.GetAsync(new GetBrandByContactEmailSpecification(request.Dto.ContactEmail), cancellationToken, true) is not null)
+        {
+            _logger.LogWarning("Brand with ContactEmail '{ContactEmail}' already exists.", request.Dto.ContactEmail);
+            throw new AlreadyExistsException<Brand>($"with ContactEmail '{request.Dto.ContactEmail}'");
+        }
+
+        if (!string.IsNullOrEmpty(request.Dto.WebsiteUrl) && brand.WebsiteUrl != request.Dto.WebsiteUrl &&
+            await repo.GetAsync(new GetBrandByWebsiteUrlSpecification(request.Dto.WebsiteUrl), cancellationToken, true) is not null)
+            throw new AlreadyExistsException<Brand>($"with WebsiteUrl '{request.Dto.WebsiteUrl}'");
+
+        _mapper.Map(request.Dto, brand);
+        brand.ModifiedBy = user.Id;
+        brand.ModifiedAt = DateTime.UtcNow;
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Brand '{BrandName}' (ID: {BrandId}) updated successfully.",
+            brand.Name, brand.Id);
+
+        return _mapper.Map<BrandDetailsDto>(brand);
     }
+
 }

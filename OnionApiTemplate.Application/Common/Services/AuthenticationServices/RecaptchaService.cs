@@ -18,6 +18,12 @@ namespace Khazen.Application.Common.Services.AuthenticationServices
 
         public async Task<RecaptchaResponse> VerifyAsync(string token, string email)
         {
+            if (!_recaptchaOptions.Enabled)
+            {
+                _logger.LogWarning("Recaptcha is disabled. Skipping validation for {Email}", email);
+                return new RecaptchaResponse { Success = true, Score = 1.0f };
+            }
+
             var response = await _http.PostAsync(
                 $"{_recaptchaOptions.VerificationUrl}?secret={_recaptchaOptions.SecretKey}&response={token}",
                 null);
