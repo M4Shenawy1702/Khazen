@@ -1,4 +1,5 @@
-﻿using Khazen.Application.UseCases.AuthenticationModule.AuthModule.Commands.Login;
+﻿using Khazen.Application.Common.Configurations;
+using Khazen.Application.UseCases.AuthenticationModule.AuthModule.Commands.Login;
 
 namespace Khazen.Application.Validations.Auth
 {
@@ -28,10 +29,11 @@ namespace Khazen.Application.Validations.Auth
                 .MinimumLength(MinimumPasswordLength)
                     .WithErrorCode("AUTH_LOGIN_005")
                     .WithMessage($"Password must be at least {MinimumPasswordLength} characters long.");
-            RuleFor(x => x.Dto.RecaptchaToken)
-                .NotEmpty()
-                    .WithErrorCode("AUTH_LOGIN_006")
-                    .WithMessage("Security validation token (reCAPTCHA) is required.");
+            if (SystemSettings.GetValue<bool>("EnableRecaptcha", false))
+                RuleFor(x => x.Dto.RecaptchaToken)
+                    .NotEmpty()
+                        .WithErrorCode("AUTH_LOGIN_006")
+                        .WithMessage("Security validation token (reCAPTCHA) is required.");
         }
     }
 }

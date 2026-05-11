@@ -33,6 +33,13 @@ namespace Khazen.Application.UseCases.HRModule.DepartmentUseCases.Commands.Creat
 
             try
             {
+                var user = await _userManager.FindByIdAsync(request.CurrentUserId);
+                if (user is null)
+                {
+                    _logger.LogError("User {UserId} not found", request.CurrentUserId);
+                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+                }
+
                 var departmentRepo = _unitOfWork.GetRepository<Department, Guid>();
 
                 var exists = await departmentRepo.AnyAsync(d => d.Name == request.Dto.Name && !d.IsDeleted, cancellationToken);
@@ -40,13 +47,6 @@ namespace Khazen.Application.UseCases.HRModule.DepartmentUseCases.Commands.Creat
                 {
                     _logger.LogWarning("Conflict: {DepartmentName} already exists", request.Dto.Name);
                     throw new AlreadyExistsException<Department>(request.Dto.Name);
-                }
-
-                var user = await _userManager.FindByNameAsync(request.CurrentUserId);
-                if (user is null)
-                {
-                    _logger.LogError("User {UserId} not found", request.CurrentUserId);
-                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
                 }
 
                 var department = _mapper.Map<Department>(request.Dto);

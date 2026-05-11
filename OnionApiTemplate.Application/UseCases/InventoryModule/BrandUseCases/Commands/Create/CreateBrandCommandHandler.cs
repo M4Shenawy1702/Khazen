@@ -32,46 +32,40 @@ namespace Khazen.Application.UseCases.InventoryModule.BrandUseCases.Commands.Cre
                 _logger.LogError("User with ID '{UserId}' not found", request.CurrentUserId);
                 throw new NotFoundException<ApplicationUser>($"with ID '{request.CurrentUserId}'");
             }
-            try
+
+            var repo = _unitOfWork.GetRepository<Brand, Guid>();
+
+            if (await repo.GetAsync(new GetBrandByNameSpecification(request.Dto.Name), cancellationToken, true) is not null)
             {
-                var repo = _unitOfWork.GetRepository<Brand, Guid>();
-
-                if (await repo.GetAsync(new GetBrandByNameSpecification(request.Dto.Name), cancellationToken, true) is not null)
-                {
-                    _logger.LogInformation("Brand with Name '{Name}' already exists", request.Dto.Name);
-                    throw new AlreadyExistsException<Brand>($"with Name '{request.Dto.Name}'");
-                }
-
-                if (!string.IsNullOrEmpty(request.Dto.ContactEmail) &&
-                    await repo.GetAsync(new GetBrandByContactEmailSpecification(request.Dto.ContactEmail), cancellationToken, true) is not null)
-                {
-                    _logger.LogInformation("Brand with ContactEmail '{ContactEmail}' already exists", request.Dto.ContactEmail);
-                    throw new AlreadyExistsException<Brand>($"with ContactEmail '{request.Dto.ContactEmail}'");
-                }
-
-                if (!string.IsNullOrEmpty(request.Dto.WebsiteUrl) &&
-                    await repo.GetAsync(new GetBrandByWebsiteUrlSpecification(request.Dto.WebsiteUrl), cancellationToken, true) is not null)
-                {
-                    _logger.LogInformation("Brand with WebsiteUrl '{WebsiteUrl}' already exists", request.Dto.WebsiteUrl);
-                    throw new AlreadyExistsException<Brand>($"with WebsiteUrl '{request.Dto.WebsiteUrl}'");
-                }
-
-                var brand = _mapper.Map<Brand>(request.Dto);
-                brand.CreatedBy = user.Id;
-                brand.CreatedAt = DateTime.UtcNow;
-
-                await repo.AddAsync(brand, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                _logger.LogInformation("Brand {BrandName} was created successfully", request.Dto.Name);
-
-                return _mapper.Map<BrandDto>(brand);
+                _logger.LogInformation("Brand with Name '{Name}' already exists", request.Dto.Name);
+                throw new AlreadyExistsException<Brand>($"with Name '{request.Dto.Name}'");
             }
-            catch (Exception ex)
+
+            if (!string.IsNullOrEmpty(request.Dto.ContactEmail) &&
+                await repo.GetAsync(new GetBrandByContactEmailSpecification(request.Dto.ContactEmail), cancellationToken, true) is not null)
             {
-                _logger.LogError(ex, "Unexpected error occurred while creating brand");
-                throw new ApplicationException("An unexpected error occurred while creating the brand.");
+                _logger.LogInformation("Brand with ContactEmail '{ContactEmail}' already exists", request.Dto.ContactEmail);
+                throw new AlreadyExistsException<Brand>($"with ContactEmail '{request.Dto.ContactEmail}'");
             }
+
+            if (!string.IsNullOrEmpty(request.Dto.WebsiteUrl) &&
+                await repo.GetAsync(new GetBrandByWebsiteUrlSpecification(request.Dto.WebsiteUrl), cancellationToken, true) is not null)
+            {
+                _logger.LogInformation("Brand with WebsiteUrl '{WebsiteUrl}' already exists", request.Dto.WebsiteUrl);
+                throw new AlreadyExistsException<Brand>($"with WebsiteUrl '{request.Dto.WebsiteUrl}'");
+            }
+            var brand = _mapper.Map<Brand>(request.Dto);
+
+
+            brand.CreatedBy = user.Id;
+            brand.CreatedAt = DateTime.UtcNow;
+
+            await repo.AddAsync(brand, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Brand {BrandName} was created successfully", request.Dto.Name);
+
+            return _mapper.Map<BrandDto>(brand);
         }
 
     }

@@ -10,7 +10,7 @@ namespace Khazen.Application.BaseSpecifications.HRModule.DepartmentSpecification
                 (queryParameters.DepartmentId == null || d.Id == queryParameters.DepartmentId) &&
                 (string.IsNullOrWhiteSpace(queryParameters.DepartmentName) ||
                  d.Name.ToLower().Trim().Contains(queryParameters.DepartmentName.ToLower().Trim())) &&
-                d.IsDeleted == queryParameters.IsActive
+                d.IsDeleted == queryParameters.IsDeleted
             )
         {
             ApplyPagination(queryParameters.PageSize, queryParameters.PageIndex);

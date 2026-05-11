@@ -68,9 +68,7 @@ namespace Khazen.Application
             services.AddScoped<IPurchaseOrderStatusService, PurchaseOrderStatusService>();
             services.AddScoped<ISalaryDomainService, SalaryDomainService>();
             services.AddScoped<IEmployeeDomainServices, EmployeeDomainServices>();
-            services.AddHttpClient<IRecaptchaService, RecaptchaService>(client =>
-            {
-            });
+            services.AddHttpClient<IRecaptchaService, RecaptchaService>(client => { });
 
 
             services.Configure<RecaptchaSettings>(

@@ -1,5 +1,5 @@
 ﻿using Khazen.Application.DOTs.HRModule.Department;
-using Khazen.Application.UseCases.HRModule.DepartmentUseCases.Commands.Create;
+using Khazen.Application.DOTs.HRModule.DepartmentDtos;
 
 namespace Khazen.Application.MappingProfile
 {
@@ -7,7 +7,8 @@ namespace Khazen.Application.MappingProfile
     {
         public DepartmentProfile()
         {
-            CreateMap<CreateDepartmentCommand, Department>();
+            CreateMap<CreateDepartmentDto, Department>();
+            CreateMap<UpdateDepartmentDto, Department>();
             CreateMap<Department, DepartmentDto>();
             CreateMap<Department, DepartmentDetailsDto>();
         }

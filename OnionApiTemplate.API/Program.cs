@@ -1,5 +1,6 @@
 using Khazen.API.Extensions;
 using Khazen.Application;
+using Khazen.Application.Common.Configurations;
 using Khazen.Domain.IRepositoty;
 using Khazen.Infrastructure;
 using Khazen.Infrastructure.Common.Setting;
@@ -19,6 +20,8 @@ namespace Khazen.API
             builder.Services.RegisterApplicationServices(builder.Configuration);
             builder.Services.AddHttpContextAccessor();
 
+            // Configure system setting to be used across the application
+            SystemSettings.Initialize(builder.Configuration);
             builder.Services.Configure<JWTConfigurations>(builder.Configuration.GetSection("JWT"));
 
             builder.Services.AddControllers();

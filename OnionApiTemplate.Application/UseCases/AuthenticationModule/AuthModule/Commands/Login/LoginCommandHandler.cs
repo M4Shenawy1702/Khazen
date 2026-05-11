@@ -1,4 +1,5 @@
-﻿using Khazen.Application.Common.Interfaces.Authentication;
+﻿using Khazen.Application.Common.Configurations;
+using Khazen.Application.Common.Interfaces.Authentication;
 using Khazen.Application.DOTs.Auth;
 using Khazen.Application.UseCases.AuthenticationModule.Common;
 using Khazen.Domain.Exceptions;
@@ -38,7 +39,8 @@ namespace Khazen.Application.UseCases.AuthenticationModule.AuthModule.Commands.L
                 throw new BadRequestException(errors);
             }
 
-            if (request.Dto.RecaptchaToken is null)
+            var recaptchaEnabled = SystemSettings.GetValue<bool>("Recaptcha:Enabled", false);
+            if (recaptchaEnabled && request.Dto.RecaptchaToken is null)
             {
                 _logger.LogWarning("Recaptcha token was missing but required for email: {Email}", request.Dto.Email);
                 throw new BadRequestException("Recaptcha token is required.");

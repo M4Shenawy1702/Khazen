@@ -22,44 +22,32 @@ namespace Khazen.Application.UseCases.InventoryModule.BrandUseCases.Commands.Del
                 throw new NotFoundException<ApplicationUser>($"with ID '{request.CurrentUserId}'");
             }
 
-            try
+            var repo = _unitOfWork.GetRepository<Brand, Guid>();
+            var brand = await repo.GetAsync(new GetBrandByIdSpecification(request.Id), cancellationToken);
+            if (brand is null)
             {
-                var repo = _unitOfWork.GetRepository<Brand, Guid>();
-                var brand = await repo.GetAsync(new GetBrandByIdSpecification(request.Id), cancellationToken);
-                if (brand is null)
-                {
-                    _logger.LogWarning("Brand not found with ID: {BrandId}", request.Id);
-                    throw new NotFoundException<Brand>(request.Id);
-                }
+                _logger.LogWarning("Brand not found with ID: {BrandId}", request.Id);
+                throw new NotFoundException<Brand>(request.Id);
+            }
 
-                if (brand.Products?.Count > 0)
-                {
-                    _logger.LogWarning(
-                        "Attempted to delete brand '{BrandName}' (ID: {BrandId}) which has related products.",
-                        brand.Name, brand.Id);
-
-                    throw new ConflictException(
-                        $"Cannot delete brand '{brand.Name}' because it has related products.");
-                }
-
-                brand.Toggle(user.Id);
-
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                _logger.LogInformation("Brand '{BrandName}' (ID: {BrandId}) deleted successfully.",
+            if (brand.Products?.Count > 0)
+            {
+                _logger.LogWarning(
+                    "Attempted to delete brand '{BrandName}' (ID: {BrandId}) which has related products.",
                     brand.Name, brand.Id);
 
-                return true;
+                throw new BadRequestException(
+                    $"Cannot delete brand '{brand.Name}' because it has related products.");
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Unexpected error occurred while deleting brand with ID: {BrandId}",
-                    request.Id);
 
-                throw new ApplicationException("An unexpected error occurred while deleting the brand.");
-            }
+            brand.Toggle(user.Id);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Brand '{BrandName}' (ID: {BrandId}) deleted successfully.",
+                brand.Name, brand.Id);
+
+            return true;
         }
-
     }
 }

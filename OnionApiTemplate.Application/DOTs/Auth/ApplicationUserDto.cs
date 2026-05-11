@@ -14,5 +14,7 @@
         public DateTime? LastLoginAt { get; set; }
         public IEnumerable<string> UserRoles { get; set; } = new List<string>();
         public string UserType { get; set; } = string.Empty;
+        public byte[] RowVersion { get; set; }
+
     }
 }

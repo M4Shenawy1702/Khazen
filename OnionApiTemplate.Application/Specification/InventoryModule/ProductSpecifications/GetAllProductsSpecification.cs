@@ -4,16 +4,16 @@ using Khazen.Domain.Entities.InventoryModule;
 namespace Khazen.Application.BaseSpecifications.InventoryModule.ProductSpecifications
 {
     public class GetAllProductsSpecification
-        : BaseSpecifications<Product>
+    : BaseSpecifications<Product>
     {
         public GetAllProductsSpecification(ProductsQueryParameters queryParameters)
-    : base(d =>
-        (queryParameters.ProductId == null || d.Id == queryParameters.ProductId) &&
-        (string.IsNullOrWhiteSpace(queryParameters.ProductName) ||
-         d.Name.ToLower().Trim().Contains(queryParameters.ProductName.ToLower().Trim())) &&
-        (string.IsNullOrWhiteSpace(queryParameters.ProductSKU) ||
-             d.Name.ToLower().Trim().Contains(queryParameters.ProductSKU.ToLower().Trim()))
-        )
+            : base(d =>
+                (queryParameters.ProductId == null || d.Id == queryParameters.ProductId) &&
+                (string.IsNullOrWhiteSpace(queryParameters.ProductName) ||
+                 d.Name.ToLower().Trim().Contains(queryParameters.ProductName.ToLower().Trim())) &&
+                (string.IsNullOrWhiteSpace(queryParameters.ProductSKU) ||
+                 d.SKU.ToLower().Trim().Contains(queryParameters.ProductSKU.ToLower().Trim())) // ✅ d.SKU not d.Name
+            )
         {
             AddInclude(p => p.Category!);
             AddInclude(p => p.Brand!);
@@ -21,10 +21,10 @@ namespace Khazen.Application.BaseSpecifications.InventoryModule.ProductSpecifica
             AddInclude(p => p.WarehouseProducts!);
             ApplyPagination(queryParameters.PageSize, queryParameters.PageIndex);
         }
-        public GetAllProductsSpecification(List<Guid> Ids)
-    : base(d => Ids.Contains(d.Id))
-        {
 
+        public GetAllProductsSpecification(List<Guid> Ids)
+            : base(d => Ids.Contains(d.Id))
+        {
         }
     }
 }

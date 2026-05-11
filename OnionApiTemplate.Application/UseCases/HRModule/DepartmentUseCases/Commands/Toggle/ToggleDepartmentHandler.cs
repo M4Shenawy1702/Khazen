@@ -17,6 +17,13 @@ namespace Khazen.Application.UseCases.HRModule.DepartmentUseCases.Commands.Delet
         {
             _logger.LogInformation("Attempting to toggle department state for ID: {DepartmentId}", request.Id);
 
+            var user = await _userManager.FindByIdAsync(request.CurrentUserId);
+            if (user is null)
+            {
+                _logger.LogError("User {UserId} not found", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
+
             var repository = _unitOfWork.GetRepository<Department, Guid>();
 
             var existingDepartment = await repository.GetByIdAsync(request.Id, cancellationToken);
@@ -24,13 +31,6 @@ namespace Khazen.Application.UseCases.HRModule.DepartmentUseCases.Commands.Delet
             {
                 _logger.LogWarning("Department {DepartmentId} not found", request.Id);
                 throw new NotFoundException<Department>(request.Id);
-            }
-
-            var user = await _userManager.FindByNameAsync(request.CurrentUserId);
-            if (user is null)
-            {
-                _logger.LogError("User {UserId} not found", request.CurrentUserId);
-                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
             }
 
             existingDepartment.Toggle(request.CurrentUserId);
