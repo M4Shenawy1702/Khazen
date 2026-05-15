@@ -32,24 +32,35 @@ namespace Khazen.Application.UseCases.InventoryModule.CategoryUseCases.Commands.
                 throw new BadRequestException(errors);
             }
 
+            var user = await _userManager.FindByIdAsync(request.CurrentUserId);
+            if (user is null)
+            {
+                _logger.LogError("Audit Failure: User ID '{UserId}' not found during Category creation.", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
+
+            var repo = _unitOfWork.GetRepository<Category, Guid>();
+
+            var existingCategory = await repo.GetAsync(new GetCategoryByNameSpecification(request.Dto.Name), cancellationToken, true);
+
+            if (existingCategory is { IsDeleted: true })
+            {
+                _logger.LogWarning(
+                    "Soft-deleted Category name detected: {CategoryName}",
+                    request.Dto.Name);
+
+                throw new AlreadyExistsException<Category>(
+                    $"with Name '{request.Dto.Name}'. Try to restore it first.");
+            }
+
+            if (existingCategory is not null)
+            {
+                _logger.LogWarning("Duplicate Category name detected: {CategoryName}", request.Dto.Name);
+                throw new AlreadyExistsException<Category>($"with Name '{request.Dto.Name}'");
+            }
+
             try
             {
-                var user = await _userManager.FindByIdAsync(request.CurrentUserId);
-                if (user is null)
-                {
-                    _logger.LogError("Audit Failure: User ID '{UserId}' not found during Category creation.", request.CurrentUserId);
-                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
-                }
-
-                var repo = _unitOfWork.GetRepository<Category, Guid>();
-
-                var existingCategory = await repo.GetAsync(new GetCategoryByNameSpecification(request.Dto.Name), cancellationToken, true);
-                if (existingCategory is not null)
-                {
-                    _logger.LogWarning("Duplicate Category name detected: {CategoryName}", request.Dto.Name);
-                    throw new AlreadyExistsException<Category>($"with Name '{request.Dto.Name}'");
-                }
-
                 var category = _mapper.Map<Category>(request.Dto);
                 category.CreatedAt = DateTime.UtcNow;
                 category.CreatedBy = user.Id;
@@ -62,12 +73,12 @@ namespace Khazen.Application.UseCases.InventoryModule.CategoryUseCases.Commands.
 
                 return _mapper.Map<CategoryDto>(category);
             }
-            catch (Exception ex) when (ex is not DomainException && ex is not ApplicationException)
+            catch (Exception ex)
             {
-                _logger.LogCritical(ex, "A database or system error occurred while creating category: {CategoryName}", request.Dto.Name);
-
-                throw new ApplicationException("An unexpected error occurred while saving the category. Please try again later.");
+                _logger.LogError(ex, "An error occurred while creating Category: {CategoryName}", request.Dto.Name);
+                throw;
             }
+
         }
     }
 }

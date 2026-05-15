@@ -27,48 +27,48 @@ namespace Khazen.Application.UseCases.InventoryModule.WarehouseUseCases.Commands
                 throw new BadRequestException(errors);
             }
 
+
+            var repo = _unitOfWork.GetRepository<Warehouse, Guid>();
+
+            _logger.LogDebug("ToggleWarehouse: Fetching User and Warehouse (including Stock) in parallel for {Id}", request.Id);
+
+            var userTask = _userManager.FindByIdAsync(request.CurrentUserId);
+            var warehouseTask = repo.GetAsync(new GetWareHouseByIdSpec(request.Id), cancellationToken);
+
+            await Task.WhenAll(userTask, warehouseTask);
+
+            var user = await userTask;
+            var warehouse = await warehouseTask;
+
+            if (user is null)
+            {
+                _logger.LogError("ToggleWarehouse: Audit failure. User {UserId} not found.", request.CurrentUserId);
+                throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
+            }
+
+            if (warehouse is null)
+            {
+                _logger.LogWarning("ToggleWarehouse: Warehouse {Id} not found.", request.Id);
+                throw new NotFoundException<Warehouse>(request.Id);
+            }
+
+
+            if (!warehouse.IsDeleted)
+            {
+                _logger.LogDebug("ToggleWarehouse: Checking stock levels for Warehouse '{Name}' before deactivation.", warehouse.Name);
+
+                var hasStock = warehouse.WarehouseProducts?.Any(wp => wp.QuantityInStock > 0) ?? false;
+                if (hasStock)
+                {
+                    var totalStock = warehouse.WarehouseProducts?.Sum(wp => wp.QuantityInStock) ?? 0;
+                    _logger.LogWarning("ToggleWarehouse: Conflict - Warehouse '{Name}' ({Id}) still contains {Stock} units.",
+                        warehouse.Name, warehouse.Id, totalStock);
+
+                    throw new ConflictException($"Cannot deactivate warehouse '{warehouse.Name}' because it still contains stock ({totalStock} units).");
+                }
+            }
             try
             {
-                var repo = _unitOfWork.GetRepository<Warehouse, Guid>();
-
-                _logger.LogDebug("ToggleWarehouse: Fetching User and Warehouse (including Stock) in parallel for {Id}", request.Id);
-
-                var userTask = _userManager.FindByIdAsync(request.CurrentUserId);
-                var warehouseTask = repo.GetAsync(new GetWareHouseByIdSpec(request.Id), cancellationToken);
-
-                await Task.WhenAll(userTask, warehouseTask);
-
-                var user = await userTask;
-                var warehouse = await warehouseTask;
-
-                if (user is null)
-                {
-                    _logger.LogError("ToggleWarehouse: Audit failure. User {UserId} not found.", request.CurrentUserId);
-                    throw new NotFoundException<ApplicationUser>(request.CurrentUserId);
-                }
-
-                if (warehouse is null)
-                {
-                    _logger.LogWarning("ToggleWarehouse: Warehouse {Id} not found.", request.Id);
-                    throw new NotFoundException<Warehouse>(request.Id);
-                }
-
-
-                if (!warehouse.IsDeleted)
-                {
-                    _logger.LogDebug("ToggleWarehouse: Checking stock levels for Warehouse '{Name}' before deactivation.", warehouse.Name);
-
-                    var hasStock = warehouse.WarehouseProducts?.Any(wp => wp.QuantityInStock > 0) ?? false;
-                    if (hasStock)
-                    {
-                        var totalStock = warehouse.WarehouseProducts?.Sum(wp => wp.QuantityInStock) ?? 0;
-                        _logger.LogWarning("ToggleWarehouse: Conflict - Warehouse '{Name}' ({Id}) still contains {Stock} units.",
-                            warehouse.Name, warehouse.Id, totalStock);
-
-                        throw new ConflictException($"Cannot deactivate warehouse '{warehouse.Name}' because it still contains stock ({totalStock} units).");
-                    }
-                }
-
                 bool previousState = warehouse.IsDeleted;
                 _logger.LogDebug("ToggleWarehouse: Toggling state for '{Name}'. Current IsDeleted: {State}",
                     warehouse.Name, previousState);
