@@ -40,14 +40,23 @@ namespace Khazen.Application.UseCases.InventoryModule.BrandUseCases.Commands.Del
                     $"Cannot delete brand '{brand.Name}' because it has related products.");
             }
 
-            brand.Toggle(user.Id);
+            try
+            {
+                brand.Toggle(user.Id);
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Brand '{BrandName}' (ID: {BrandId}) deleted successfully.",
-                brand.Name, brand.Id);
+                _logger.LogInformation("Brand '{BrandName}' (ID: {BrandId}) deleted successfully.",
+                    brand.Name, brand.Id);
 
-            return true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while deleting brand '{BrandName}' (ID: {BrandId}).",
+                    brand.Name, brand.Id);
+                throw;
+            }
         }
     }
 }

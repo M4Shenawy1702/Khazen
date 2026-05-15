@@ -63,18 +63,26 @@ internal class UpdateBrandCommandHandler(
         if (!string.IsNullOrEmpty(request.Dto.WebsiteUrl) && brand.WebsiteUrl != request.Dto.WebsiteUrl &&
             await repo.GetAsync(new GetBrandByWebsiteUrlSpecification(request.Dto.WebsiteUrl), cancellationToken, true) is not null)
             throw new AlreadyExistsException<Brand>($"with WebsiteUrl '{request.Dto.WebsiteUrl}'");
+        try
+        {
+            _mapper.Map(request.Dto, brand);
+            brand.ModifiedBy = user.Id;
+            brand.ModifiedAt = DateTime.UtcNow;
 
-        _mapper.Map(request.Dto, brand);
-        brand.ModifiedBy = user.Id;
-        brand.ModifiedAt = DateTime.UtcNow;
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation(
+                "Brand '{BrandName}' (ID: {BrandId}) updated successfully.",
+                brand.Name, brand.Id);
 
-        _logger.LogInformation(
-            "Brand '{BrandName}' (ID: {BrandId}) updated successfully.",
-            brand.Name, brand.Id);
-
-        return _mapper.Map<BrandDetailsDto>(brand);
+            return _mapper.Map<BrandDetailsDto>(brand);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while updating Brand '{BrandName}' (ID: {BrandId}).", brand.Name, brand.Id);
+            throw;
+        }
     }
+}
 
 }

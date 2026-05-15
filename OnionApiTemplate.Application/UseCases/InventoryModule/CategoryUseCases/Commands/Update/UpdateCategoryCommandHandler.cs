@@ -58,15 +58,23 @@ namespace Khazen.Application.UseCases.InventoryModule.CategoryUseCases.Commands.
                 _logger.LogWarning("Attempted to update non-existing category with ID {CategoryId}.", request.Id);
                 throw new NotFoundException<Category>(request.Id);
             }
+            try
+            {
+                _mapper.Map(request.Dto, category);
+                category.ModifiedBy = user.Id;
+                category.ModifiedAt = DateTime.UtcNow;
 
-            _mapper.Map(request.Dto, category);
-            category.ModifiedBy = user.Id;
-            category.ModifiedAt = DateTime.UtcNow;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Category '{CategoryName}' with ID {CategoryId} updated successfully.", category.Name, category.Id);
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Category '{CategoryName}' with ID {CategoryId} updated successfully.", category.Name, category.Id);
-
-            return _mapper.Map<CategoryDetailsDto>(category);
+                return _mapper.Map<CategoryDetailsDto>(category);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while updating category with ID {CategoryId}.", request.Id);
+                throw;
+            }
         }
     }
+}
 }

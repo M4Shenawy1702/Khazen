@@ -56,16 +56,23 @@ namespace Khazen.Application.UseCases.InventoryModule.BrandUseCases.Commands.Cre
             }
             var brand = _mapper.Map<Brand>(request.Dto);
 
+            try
+            {
+                brand.CreatedBy = user.Id;
+                brand.CreatedAt = DateTime.UtcNow;
 
-            brand.CreatedBy = user.Id;
-            brand.CreatedAt = DateTime.UtcNow;
+                await repo.AddAsync(brand, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await repo.AddAsync(brand, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Brand {BrandName} was created successfully", request.Dto.Name);
 
-            _logger.LogInformation("Brand {BrandName} was created successfully", request.Dto.Name);
-
-            return _mapper.Map<BrandDto>(brand);
+                return _mapper.Map<BrandDto>(brand);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while creating Brand {BrandName}", request.Dto.Name);
+                throw;
+            }
         }
 
     }
